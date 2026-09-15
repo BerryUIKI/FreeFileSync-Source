@@ -168,15 +168,6 @@ jobs:
       - name: Consolidate Release Assets
         id: prepare_release
         run: |
-          mkdir -p release_assets
-          find artifacts/ -type f -exec cp {} release_assets/ \;
-
-          cd release_assets
-          # Remove individual checksum files and create a clean unified SHA256SUMS.txt
-          rm -f *.sha256
-          sha256sum *.tar.gz *.zip > SHA256SUMS.txt
-          cd ..
-
           # Determine Tag and Version
           if [ -n "${{ inputs.tag_name }}" ]; then
             TAG="${{ inputs.tag_name }}"
@@ -190,6 +181,29 @@ jobs:
           VERSION="${TAG#v}"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+          mkdir -p release_assets
+          find artifacts/ -type f -exec cp {} release_assets/ \;
+
+          # Fetch official upstream Windows and macOS packages if available
+          WIN_PKG="FreeFileSync_${VERSION}_Windows_Setup.exe"
+          MAC_PKG="FreeFileSync_${VERSION}_macOS.zip"
+
+          echo "Fetching upstream Windows setup (${WIN_PKG})..."
+          curl -f -L -s -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
+            -o "release_assets/${WIN_PKG}" \
+            "https://freefilesync.org/download/${WIN_PKG}" || rm -f "release_assets/${WIN_PKG}"
+
+          echo "Fetching upstream macOS package (${MAC_PKG})..."
+          curl -f -L -s -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" \
+            -o "release_assets/${MAC_PKG}" \
+            "https://freefilesync.org/download/${MAC_PKG}" || rm -f "release_assets/${MAC_PKG}"
+
+          cd release_assets
+          # Remove individual checksum files and create a clean unified SHA256SUMS.txt
+          rm -f *.sha256
+          sha256sum $(ls -1 *.tar.gz *.zip *.exe 2>/dev/null | sort -u) > SHA256SUMS.txt
+          cd ..
 
       - name: Extract Release Notes from Changelog
         run: |

@@ -166,9 +166,11 @@ The GitHub Actions workflow in [`.github/workflows/ci.yml`](.github/workflows/ci
   - `Linux x86_64` (Runner: `ubuntu-24.04`)
   - `Linux aarch64` / ARM64 (Runner: `ubuntu-24.04-arm`)
 - **Release Artifacts**:
+  - `FreeFileSync_<version>_Windows_Setup.exe` (Official upstream Windows installer).
+  - `FreeFileSync_<version>_macOS.zip` (Official upstream macOS bundle).
   - `FreeFileSync_<version>_Linux_<arch>.tar.gz` (Portable binary bundle with `Bin/`, `Resources/`, and launcher scripts).
   - `FreeFileSync_<version>_Source.tar.gz` and `.zip` (Clean source archives).
-  - `SHA256SUMS.txt` (Aggregated SHA-256 checksums).
+  - `SHA256SUMS.txt` (Aggregated SHA-256 checksums across all platforms).
 - **Release Notes**: Automatically parsed from `Changelog.txt` by [`scripts/extract_changelog.py`](scripts/extract_changelog.py).
 
 ---
