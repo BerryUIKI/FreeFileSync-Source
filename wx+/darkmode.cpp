@@ -25,6 +25,18 @@ bool zen::darkModeAvailable()
 
 namespace
 {
+struct wxColorHook
+{
+    virtual ~wxColorHook() = default;
+    virtual wxColor getColor(wxSystemColour index) const = 0;
+};
+
+inline std::unique_ptr<wxColorHook>& refGlobalColorHook()
+{
+    static std::unique_ptr<wxColorHook> globalColorHook;
+    return globalColorHook;
+}
+
 class SysColorsHook : public wxColorHook
 {
 public:

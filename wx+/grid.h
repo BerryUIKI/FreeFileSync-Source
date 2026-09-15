@@ -18,6 +18,10 @@ using wxReadOnlyDC = wxDC;
 using wxInfoDC = wxClientDC;
 #endif
 
+#ifndef wxSYS_COLOUR_GRIDLINES
+#define wxSYS_COLOUR_GRIDLINES wxSYS_COLOUR_3DLIGHT
+#endif
+
 //a user-friendly, extensible and high-performance grid control
 namespace zen
 {

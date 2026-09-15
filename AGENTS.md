@@ -137,6 +137,14 @@ Upstream source assumes custom-patched wxWidgets builds. Standard Linux distribu
     - Guarded `CURLE_OBSOLETE34` / `CURLE_HTTP_POST_ERROR` and `CURLE_OBSOLETE41` / `CURLE_FUNCTION_NOT_FOUND` with `#if LIBCURL_VERSION_NUM >= 0x080800`.
     - Guarded `CURLE_TOO_LARGE` (0x080600) and `CURLE_ECH_REQUIRED` (0x080800) in `libcurl/curl_wrap.cpp`.
 
+12. **Compatibility fallback for `wxColorHook`**:
+    Upstream assumes a custom-patched wxWidgets build that adds `wxColorHook` and `refGlobalColorHook()` into `wx/settings.h` (documented in `Bugs.txt`).
+    - Added self-contained fallback definitions for `struct wxColorHook` and `refGlobalColorHook()` in `wx+/darkmode.cpp`.
+
+13. **Compatibility fallback for `wxSYS_COLOUR_GRIDLINES`**:
+    `wxSYS_COLOUR_GRIDLINES` is not a standard wxWidgets system color constant and is only present in custom wxWidgets forks.
+    - Defined `wxSYS_COLOUR_GRIDLINES` fallback as `wxSYS_COLOUR_3DLIGHT` in `wx+/grid.h`.
+
 ---
 
 ## 4. CI/CD & Automated Releases
