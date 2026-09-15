@@ -556,8 +556,7 @@ void fff::applyVersioningLimit(const std::set<VersioningLimitFolder>& folderLimi
     Protected<std::map<AbstractPath, size_t>&> protFolderItemCount(folderItemCount);
     const std::wstring txtRemoving = _("Removing old file versions:") + L' ';
     const std::wstring txtDeletingFolder = _("Deleting folder %x");
-
-    auto deleteEmptyFolderTask = [&txtDeletingFolder, &protFolderItemCount](this const auto& self, const AbstractPath& folderPath, AsyncCallback& acb) -> void //throw ThreadStopRequest
+    auto deleteEmptyFolderImpl = [&txtDeletingFolder, &protFolderItemCount](auto& self, const AbstractPath& folderPath, AsyncCallback& acb) -> void //throw ThreadStopRequest
     {
         const std::wstring errMsg = tryReportingError([&] //throw ThreadStopRequest
         {
@@ -571,8 +570,12 @@ void fff::applyVersioningLimit(const std::set<VersioningLimitFolder>& folderLimi
                 bool deleteParent = false;
                 protFolderItemCount.access([&](auto& folderItemCount2) { deleteParent = --folderItemCount2[*parentPath] == 0; });
                 if (deleteParent) //we're done here anyway => no need to schedule parent deletion in a separate task!
-                    self(*parentPath, acb); //throw ThreadStopRequest
+                    self(self, *parentPath, acb); //throw ThreadStopRequest
             }
+    };
+    auto deleteEmptyFolderTask = [&deleteEmptyFolderImpl](const AbstractPath& folderPath, AsyncCallback& acb)
+    {
+        deleteEmptyFolderImpl(deleteEmptyFolderImpl, folderPath, acb);
     };
 
     std::vector<std::pair<AbstractPath, ParallelWorkItem>> parallelWorkload;

@@ -115,6 +115,10 @@ Upstream source assumes custom-patched wxWidgets builds. Standard Linux distribu
    - Created `wx+/log.h` with a custom `wxLogCollector` class inheriting from `wxLog` when `!wxCHECK_VERSION(3, 3, 1)`.
    - Included `<wx+/log.h>` in `localization.cpp`, `image_resources.cpp`, `batch_status_handler.cpp`, `gui_status_handler.cpp`, and `main_dlg.cpp`.
 
+7. **Compatibility fallback for C++23 "deducing this" on GCC < 14**:
+   C++23 explicit object parameter (`this const auto& self`) for recursive lambdas requires GCC 14+. Standard Linux distributions such as Ubuntu 24.04 ship with GCC 13 by default.
+   - Refactored recursive lambdas in `FreeFileSync/Source/base/versioning.cpp` and `zen/dir_watcher.cpp` to use the portable zero-overhead self-passing lambda pattern.
+
 ---
 
 ## 4. CI/CD & Automated Releases
