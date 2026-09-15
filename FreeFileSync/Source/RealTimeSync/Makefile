@@ -12,6 +12,7 @@ CXXFLAGS += `wx-config --cxxflags --debug=no`
 LDFLAGS  += `wx-config --libs std, aui, richtext --debug=no`
 
 CXXFLAGS += `pkg-config --cflags gtk+-3.0`
+LDFLAGS  += `pkg-config --libs gtk+-3.0`
 #treat as system headers so that warnings are hidden:
 CXXFLAGS += -isystem/usr/include/gtk-3.0
 

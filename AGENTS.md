@@ -149,6 +149,10 @@ Upstream source assumes custom-patched wxWidgets builds. Standard Linux distribu
     In wxWidgets 3.2 on Linux/GTK, `wxSystemAppearance::AreAppsDark()` was only defined on Windows (`__WXMSW__`).
     - Added fallback to `IsDark()` when `!defined(__WXMSW__) && !wxCHECK_VERSION(3, 3, 0)` in `wx+/darkmode.cpp`.
 
+15. **Explicit `gtk+-3.0` linkage in Makefiles**:
+    Modern Linux linkers enforce `--as-needed` / `--no-copy-dt-needed-entries`, which disallows implicit DSO linkage from wxWidgets for direct GTK calls (such as `gtk_css_provider_load_from_path`).
+    - Added `LDFLAGS += \`pkg-config --libs gtk+-3.0\`` to `FreeFileSync/Source/Makefile` and `FreeFileSync/Source/RealTimeSync/Makefile`.
+
 ---
 
 ## 4. CI/CD & Automated Releases

@@ -24,6 +24,7 @@ CXXFLAGS += `pkg-config --cflags libssh2`
 LDFLAGS  += `pkg-config --libs libssh2`
 
 CXXFLAGS += `pkg-config --cflags gtk+-3.0`
+LDFLAGS  += `pkg-config --libs gtk+-3.0`
 #treat as system headers so that warnings are hidden:
 CXXFLAGS += -isystem/usr/include/gtk-3.0
 
