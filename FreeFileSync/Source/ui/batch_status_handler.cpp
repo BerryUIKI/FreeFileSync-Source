@@ -7,6 +7,7 @@
 #include "batch_status_handler.h"
 #include <zen/shutdown.h>
 #include <wx+/popup_dlg.h>
+#include <wx+/log.h>
 #include <wx/app.h>
 #include <wx/sound.h>
 

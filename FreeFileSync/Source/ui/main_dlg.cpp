@@ -27,6 +27,7 @@
 #include <wx+/rtl.h>
 #include <wx+/window_tools.h>
 #include <wx+/popup_dlg.h>
+#include <wx+/log.h>
 #include <wx+/image_resources.h>
 #include "cfg_grid.h"
 #include "folder_selector.h"

@@ -8,7 +8,7 @@
 #include <clocale> //setlocale
 #include <zen/file_traverser.h>
 #include <zen/file_io.h>
-#include <wx/log.h>
+#include <wx+/log.h>
 #include <wx/zipstrm.h>
 #include <wx/mstream.h>
 #include <wx/uilocale.h>

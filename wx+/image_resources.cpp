@@ -9,7 +9,7 @@
 #include <zen/thread.h>
 #include <zen/file_io.h>
 #include <zen/file_traverser.h>
-#include <wx/log.h>
+#include "log.h"
 #include <wx/mstream.h>
 #include <wx/zipstrm.h>
 #include <xBRZ/src/xbrz.h>
