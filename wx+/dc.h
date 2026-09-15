@@ -11,9 +11,11 @@
 //#include <zen/legacy_compiler.h> //macOS: std::get
 #include <wx/dcbuffer.h> //for macro: wxALWAYS_NATIVE_DOUBLE_BUFFER
 #include <wx/dcscreen.h>
+#include <wx/dcclient.h>
 
 #if !wxCHECK_VERSION(3, 3, 0)
 using wxReadOnlyDC = wxDC;
+using wxInfoDC = wxClientDC;
 #endif
 
 

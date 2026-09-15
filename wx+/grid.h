@@ -11,9 +11,11 @@
 #include <zen/stl_tools.h>
 #include <wx/scrolwin.h>
 #include <wx/dc.h>
+#include <wx/dcclient.h>
 
 #if !wxCHECK_VERSION(3, 3, 0)
 using wxReadOnlyDC = wxDC;
+using wxInfoDC = wxClientDC;
 #endif
 
 //a user-friendly, extensible and high-performance grid control

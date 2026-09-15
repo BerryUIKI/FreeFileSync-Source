@@ -101,9 +101,9 @@ Upstream source assumes custom-patched wxWidgets builds. Standard Linux distribu
 3. **Compatibility guard for `DisableAutomaticBoundingBoxUpdates`**:
    In `wx+/dc.h`: Wrap `static_cast<wxDC&>(*this).DisableAutomaticBoundingBoxUpdates();` with `#if wxCHECK_VERSION(3, 3, 0) ... #endif` (method only exists in wxWidgets 3.3+).
 
-4. **Compatibility fallback for `wxReadOnlyDC`**:
-   `wxReadOnlyDC` was introduced as a read-only base class of `wxDC` in wxWidgets 3.3+.
-   - In `wx+/grid.h` and `wx+/dc.h`: Add `#if !wxCHECK_VERSION(3, 3, 0) using wxReadOnlyDC = wxDC; #endif`.
+4. **Compatibility fallback for `wxReadOnlyDC` and `wxInfoDC`**:
+   `wxReadOnlyDC` and `wxInfoDC` were introduced in wxWidgets 3.3+.
+   - In `wx+/grid.h` and `wx+/dc.h`: Add `#if !wxCHECK_VERSION(3, 3, 0) using wxReadOnlyDC = wxDC; using wxInfoDC = wxClientDC; #endif`.
 
 5. **Disambiguate `conversionType(wxCStrData)` in `zen/string_traits.h`**:
    In standard Linux wxWidgets packages (`wxUSE_UNICODE_UTF8`), `wxString::c_str()` returns `wxCStrData` which provides implicit conversion operators to both `const char*` and `const wchar_t*`. In `zen/string_traits.h`, calling `conversionType(std::declval<S>().c_str())` is therefore ambiguous.
