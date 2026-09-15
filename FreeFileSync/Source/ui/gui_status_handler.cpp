@@ -73,25 +73,31 @@ void StatusHandlerTemporaryPanel::showStatsPanel()
 
         const bool statusRowTaken = [&]
         {
-            for (wxAuiPaneInfo& paneInfo : mainDlg_.auiMgr_.GetAllPanes())
+            for (size_t i = 0; i < mainDlg_.auiMgr_.GetAllPanes().GetCount(); ++i)
+            {
+                wxAuiPaneInfo& paneInfo = mainDlg_.auiMgr_.GetAllPanes()[i];
                 //doesn't matter if paneInfo.IsShown() or not! => move down in either case!
                 if (&paneInfo != &statusPanel &&
                     paneInfo.dock_layer     == statusPanel.dock_layer &&
                     paneInfo.dock_direction == statusPanel.dock_direction &&
                     paneInfo.dock_row       == statusPanel.dock_row)
                     return true;
+            }
 
             return false;
         }();
 
         //move all rows that are in the way one step further
         if (statusRowTaken)
-            for (wxAuiPaneInfo& paneInfo : mainDlg_.auiMgr_.GetAllPanes())
+            for (size_t i = 0; i < mainDlg_.auiMgr_.GetAllPanes().GetCount(); ++i)
+            {
+                wxAuiPaneInfo& paneInfo = mainDlg_.auiMgr_.GetAllPanes()[i];
                 if (&paneInfo != &statusPanel &&
                     paneInfo.dock_layer     == statusPanel.dock_layer &&
                     paneInfo.dock_direction == statusPanel.dock_direction &&
                     paneInfo.dock_row       >= statusPanel.dock_row)
                     ++paneInfo.dock_row;
+            }
         //------------------------------------------------------------------
 
         statusPanel.Show();

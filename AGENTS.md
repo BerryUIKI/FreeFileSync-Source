@@ -124,6 +124,10 @@ Upstream source assumes custom-patched wxWidgets builds. Standard Linux distribu
    - Defined `MAX_SFTP_OUTGOING_SIZE` and `MAX_SFTP_READ_SIZE` (30000) under `#ifndef` in `libssh2/libssh2_wrap.h`.
    - Guarded newer `LIBSSH2_ERROR_*` return cases in `libssh2/libssh2_wrap.h` with `#ifdef`.
 
+9. **Index-based iteration for `wxAuiPaneInfoArray`**:
+   In wxWidgets 3.2, `wxAuiManager::GetAllPanes()` returns `wxAuiPaneInfoArray` which privately inherits from `wxVector<wxAuiPaneInfo*>`, making `begin()`/`end()` inaccessible for C++ range-based for loops.
+   - Replaced range-based loops over `auiMgr_.GetAllPanes()` with indexed `for (size_t i = 0; i < panes.GetCount(); ++i)` loops in `ui/main_dlg.cpp` and `ui/gui_status_handler.cpp`.
+
 ---
 
 ## 4. CI/CD & Automated Releases

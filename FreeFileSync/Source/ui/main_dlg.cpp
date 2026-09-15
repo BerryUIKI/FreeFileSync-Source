@@ -1277,8 +1277,11 @@ void MainDialog::setGlobalCfgOnInit(const GlobalConfig& globalCfg)
 
     //work around wxAuiManager::LoadPerspective overwriting pane captions with old values (might be different language!)
     std::vector<std::pair<wxAuiPaneInfo*, wxString>> paneCaptions;
-    for (wxAuiPaneInfo& paneInfo : auiMgr_.GetAllPanes())
+    for (size_t i = 0; i < auiMgr_.GetAllPanes().GetCount(); ++i)
+    {
+        wxAuiPaneInfo& paneInfo = auiMgr_.GetAllPanes()[i];
         paneCaptions.emplace_back(&paneInfo, paneInfo.caption);
+    }
 
     //compare progress dialog minimum sizes are layout-dependent + can't be changed by user => don't load stale values from config
     std::vector<std::tuple<wxAuiPaneInfo*, wxSize /*min size*/, wxSize /*best size*/>> paneConstraints;
@@ -3143,7 +3146,9 @@ void MainDialog::onSetLayoutContext(wxMouseEvent& event)
 
     bool addedSeparator = false;
 
-    for (wxAuiPaneInfo& paneInfo : auiMgr_.GetAllPanes())
+    for (size_t i = 0; i < auiMgr_.GetAllPanes().GetCount(); ++i)
+    {
+        wxAuiPaneInfo& paneInfo = auiMgr_.GetAllPanes()[i];
         if (!paneInfo.IsShown() &&
             paneInfo.window != compareStatus_->getAsWindow() &&
             paneInfo.window != m_panelLog                    &&
@@ -3161,6 +3166,7 @@ void MainDialog::onSetLayoutContext(wxMouseEvent& event)
                 this->auiMgr_.Update();
             });
         }
+    }
 
     menu.popup(*this);
 }
