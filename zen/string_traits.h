@@ -9,6 +9,8 @@
 #include <string_view>
 #include "type_traits.h"
 
+class wxCStrData; //forward declaration for wxWidgets compatibility
+
 //uniform access to string-like types, both classes and character arrays
 namespace zen
 {
@@ -51,6 +53,7 @@ class GetCharTypeImpl<S, StringType::class_>
 {
     static char    conversionType(const char*);
     static wchar_t conversionType(const wchar_t*);
+    static wchar_t conversionType(const wxCStrData&); //support wxWidgets wxString in UTF-8 mode
     //static char8_t  conversionType(const char8_t*);
     //static char16_t conversionType(const char16_t*);
     //static char32_t conversionType(const char32_t*);
