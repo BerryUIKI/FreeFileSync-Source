@@ -15,7 +15,7 @@ on:
         description: 'Publish GitHub Release'
         required: false
         type: boolean
-        default: false
+        default: true
       tag_name:
         description: 'Custom Tag / Release Name (optional, defaults to v<version>)'
         required: false
