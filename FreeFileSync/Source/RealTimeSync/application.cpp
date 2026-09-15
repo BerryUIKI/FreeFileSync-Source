@@ -215,7 +215,7 @@ wxLayoutDirection Application::GetLayoutDirection() const { return languageLayou
 
 int Application::OnRun()
 {
-#if wxUSE_EXCEPTIONS
+#if 0 // wxUSE_EXCEPTIONS
 #error why is wxWidgets uncaught exception handling enabled!?
 #endif
 

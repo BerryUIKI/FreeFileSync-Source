@@ -13,7 +13,16 @@ namespace zen
 bool darkModeAvailable();
 
 //support not only "dark mode" but dark themes in general
+#if wxCHECK_VERSION(3, 3, 0)
 using ColorTheme = wxApp::Appearance; //why reinvent the wheel?
+#else
+enum class ColorTheme
+{
+    System,
+    Light,
+    Dark
+};
+#endif
 
 void colorThemeInit(wxApp& app, ColorTheme colTheme); //throw FileError
 void colorThemeCleanup();

@@ -1,0 +1,155 @@
+# AGENTS.md — Maintenance & Developer Guide for AI Agents
+
+Welcome to the **FreeFileSync-Source** repository. This document provides technical instructions, architectural context, and operating guidelines for AI agents and maintainers managing this repository.
+
+---
+
+## 1. Project Overview
+
+This repository maintains the open-source distribution of **FreeFileSync** and **RealTimeSync**, provides automated multi-architecture CI builds, and continuously publishes releases on GitHub.
+
+- **Upstream Project**: [FreeFileSync.org](https://freefilesync.org)
+- **Language & Standard**: C++23 (`-std=c++23`)
+- **Primary Dependencies**: wxWidgets (>= 3.2), GTK+ 3.0, OpenSSL, libcurl, libssh2, libidn2, zlib, libselinux.
+- **License**: GNU General Public License v3.0 (GPLv3) with upstream commercial terms.
+
+---
+
+## 2. Directory Structure
+
+```
+FreeFileSync-Source/
+├── .github/
+│   └── workflows/
+│       └── ci.yml                 # Multi-platform CI/CD and release workflow
+├── FreeFileSync/
+│   ├── Build/
+│   │   └── Resources/             # UI resources (icons, sounds, languages, styles)
+│   └── Source/
+│       ├── Makefile               # FreeFileSync build Makefile
+│       ├── application.cpp        # Application entry and initialization
+│       ├── version/version.h      # Version definition (ffsVersion)
+│       └── RealTimeSync/
+│           ├── Makefile           # RealTimeSync build Makefile
+│           └── application.cpp    # RealTimeSync entry
+├── wx+/                           # wxWidgets helper abstractions & dark mode
+│   ├── darkmode.h                 # ColorTheme / Appearance definitions
+│   └── darkmode.cpp               # Theme & color hook implementations
+├── zen/                           # Low-level core utility library
+├── zenXml/                        # XML serialization library
+├── xBRZ/                          # Image scaling algorithm
+├── libcurl/                       # curl C++ wrappers
+├── libssh2/                       # libssh2 C++ wrappers
+├── scripts/
+│   └── extract_changelog.py       # Release notes parser from Changelog.txt
+├── Changelog.txt                  # Full upstream changelog history
+├── Bugs.txt                       # Known issues and bugs log
+├── License.txt / LICENSE          # License terms (GPLv3)
+├── README.md                      # English documentation
+├── README_zh-CN.md                # 简体中文 documentation
+├── README_DE.md                   # Deutsch documentation
+└── README_JP.md                   # 日本語 documentation
+```
+
+---
+
+## 3. Upstream Synchronization Workflow
+
+When a new version of FreeFileSync is released upstream:
+
+### Step 1: Download & Inspect Upstream Source
+1. Check the latest version at `https://freefilesync.org/download.php`.
+2. Download the official source package:
+   ```bash
+   curl -L -A "Mozilla/5.0" -o FreeFileSync_<version>_Source.zip "https://freefilesync.org/download/FreeFileSync_<version>_Source.zip"
+   ```
+3. Extract the archive into a temporary folder.
+
+### Step 2: Sync Source Trees & Documents
+1. Overwrite all source directories:
+   - `FreeFileSync/`
+   - `libcurl/`
+   - `libssh2/`
+   - `wx+/`
+   - `xBRZ/`
+   - `zen/`
+   - `zenXml/`
+2. Update `Changelog.txt`, `Bugs.txt`, and `License.txt`.
+3. Update root `LICENSE` with any license modifications.
+
+### Step 3: Apply Linux Distribution Compatibility Patches
+Upstream source assumes custom-patched wxWidgets builds. Standard Linux distributions (Ubuntu, Debian, Fedora, Arch) require two compatibility adjustments:
+
+1. **Disable `wxUSE_EXCEPTIONS` check in entrypoints**:
+   In `FreeFileSync/Source/application.cpp` and `FreeFileSync/Source/RealTimeSync/application.cpp`:
+   ```cpp
+   int Application::OnRun()
+   {
+   #if 0 // wxUSE_EXCEPTIONS check disabled for distribution wxWidgets packages
+   #error why is wxWidgets uncaught exception handling enabled!?
+   #endif
+       [[maybe_unused]] const int rc = wxApp::OnRun();
+       return static_cast<int>(exitCode_);
+   }
+   ```
+
+2. **Compatibility fallback for `wxApp::Appearance`**:
+   `wxApp::Appearance` and `wxApp::SetAppearance` were introduced in wxWidgets 3.3+.
+   - In `wx+/darkmode.h`: Wrap `using ColorTheme = wxApp::Appearance;` with `#if wxCHECK_VERSION(3, 3, 0) ... #else enum class ColorTheme { System, Light, Dark }; #endif`.
+   - In `wx+/darkmode.cpp`: Guard `darkModeAvailable()` and `changeColorTheme()` with `#if wxCHECK_VERSION(3, 3, 0)`.
+
+---
+
+## 4. CI/CD & Automated Releases
+
+The GitHub Actions workflow in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) manages compilation, packaging, and automatic publishing.
+
+### Key Rules
+- **Automatic Publishing on Push to Main**: Every update pushed to the `main` branch automatically triggers CI compilation and updates/publishes the release for the current version (`v<version>`).
+- **Tag-Based Releases**: Pushing a tag matching `v*` (e.g. `v14.12`) triggers the exact same pipeline.
+- **Architectures Built**:
+  - `Linux x86_64` (Runner: `ubuntu-24.04`)
+  - `Linux aarch64` / ARM64 (Runner: `ubuntu-24.04-arm`)
+- **Release Artifacts**:
+  - `FreeFileSync_<version>_Linux_<arch>.tar.gz` (Portable binary bundle with `Bin/`, `Resources/`, and launcher scripts).
+  - `FreeFileSync_<version>_Source.tar.gz` and `.zip` (Clean source archives).
+  - `SHA256SUMS.txt` (Aggregated SHA-256 checksums).
+- **Release Notes**: Automatically parsed from `Changelog.txt` by [`scripts/extract_changelog.py`](scripts/extract_changelog.py).
+
+---
+
+## 5. Local Build & Test Commands
+
+### Prerequisites (Debian/Ubuntu)
+```bash
+sudo apt update
+sudo apt install build-essential pkg-config libwxgtk3.2-dev libgtk-3-dev \
+    libcurl4-openssl-dev libssh2-1-dev libssl-dev libidn2-dev zlib1g-dev libselinux1-dev
+```
+
+### Build FreeFileSync
+```bash
+cd FreeFileSync/Source
+make -j$(nproc)
+```
+
+### Build RealTimeSync
+```bash
+cd FreeFileSync/Source/RealTimeSync
+make -j$(nproc)
+```
+
+### Run
+```bash
+# From repository root after build:
+./FreeFileSync/Build/Bin/FreeFileSync_$(uname -m)
+```
+
+---
+
+## 6. Guidelines for AI Agents
+
+1. **Documentation Integrity**: When updating version numbers, synchronize badges and text across `README.md`, `README_zh-CN.md`, `README_DE.md`, and `README_JP.md`.
+2. **YAML Validation**: Always validate `.github/workflows/*.yml` with a YAML parser before committing.
+3. **Commit Messages**: Follow standard descriptive commit conventions:
+   `FreeFileSync <version>: <summary of changes>`

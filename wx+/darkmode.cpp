@@ -15,8 +15,11 @@ using namespace zen;
 
 bool zen::darkModeAvailable()
 {
+#if wxCHECK_VERSION(3, 3, 0)
     return true;
-
+#else
+    return false;
+#endif
 }
 
 
@@ -80,6 +83,7 @@ bool zen::equalAppearance(ColorTheme colTheme1, ColorTheme colTheme2)
 
 void zen::changeColorTheme(ColorTheme colTheme) //throw FileError
 {
+#if wxCHECK_VERSION(3, 3, 0)
     if (colTheme == ColorTheme::System) //SetAppearance(System) isn't working reliably! surprise!?
         colTheme = *globalDefaultThemeIsDark ? ColorTheme::Dark : ColorTheme::Light;
 
@@ -92,4 +96,7 @@ void zen::changeColorTheme(ColorTheme colTheme) //throw FileError
                                              rv == wxApp::AppearanceResult::CannotChange ? L"CannotChange" : L"Failure", L"" /*errorMsg*/));
     }
     catch (const SysError& e) { throw FileError(_("Failed to update the color theme."), e.toString()); }
+#else
+    (void)colTheme;
+#endif
 }
