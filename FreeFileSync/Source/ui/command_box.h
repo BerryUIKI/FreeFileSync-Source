@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef COMMAND_BOX_H_18947773210473214
-#define COMMAND_BOX_H_18947773210473214
+#pragma once
 
 #include <vector>
 #include <wx/combobox.h>
 #include <zen/zstring.h>
-
 
 //combobox with history function + functionality to delete items (DEL)
 namespace fff
@@ -52,5 +49,3 @@ private:
     const std::vector<std::pair<wxString, Zstring>> defaultCommands_; //(description/command) pairs
 };
 }
-
-#endif //COMMAND_BOX_H_18947773210473214

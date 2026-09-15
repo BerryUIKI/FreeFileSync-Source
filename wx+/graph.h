@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef GRAPH_H_234425245936567345799
-#define GRAPH_H_234425245936567345799
+#pragma once
 
 #include <map>
 #include <vector>
@@ -16,7 +14,6 @@
 #include <zen/string_tools.h>
 #include "color_tools.h"
 #include "dc.h"
-
 
 //elegant 2D graph as wxPanel specialization
 namespace zen
@@ -342,5 +339,3 @@ private:
     std::optional<wxBitmap> doubleBuffer_;
 };
 }
-
-#endif //GRAPH_H_234425245936567345799

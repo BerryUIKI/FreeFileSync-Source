@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef STRING_BASE_H_083217454562342526
-#define STRING_BASE_H_083217454562342526
+#pragma once
 
 #include <atomic>
 #include <utility> //std::exchange
 #include "string_tools.h"
-
 
 //Zbase - a policy based string class optimizing performance and flexibility
 namespace zen
@@ -226,9 +223,9 @@ class Zbase : public SP<Char>
 {
 public:
     Zbase();
-    Zbase(const Char* str) : Zbase(str, str + strLength(str)) {} //implicit conversion from a C-string!
+    Zbase(const Char* str) : Zbase(str, str + strSize(str)) {} //implicit conversion from a C-string!
     Zbase(const Char* str, size_t len) : Zbase(str, str + len) {}
-    explicit Zbase(const std::basic_string_view<Char> view) : Zbase(view.begin(), view.end()) {}
+    explicit Zbase(std::basic_string_view<Char> view) : Zbase(view.begin(), view.end()) {}
     Zbase(size_t count, Char fillChar);
     template <class RandomAccessIterator>
     Zbase(RandomAccessIterator first, RandomAccessIterator last);
@@ -291,18 +288,18 @@ public:
 
     Zbase& operator=(Zbase&& tmp) noexcept;
     Zbase& operator=(const Zbase& str);
-    Zbase& operator=(const Char* str)   { return assign(str, strLength(str)); }
+    Zbase& operator=(const Char* str)   { return assign(str, strSize(str)); }
     Zbase& operator=(Char ch)           { return assign(&ch, 1); }
     Zbase& operator+=(const Zbase& str) { return append(str.c_str(), str.size()); }
-    Zbase& operator+=(const Char* str)  { return append(str, strLength(str)); }
+    Zbase& operator+=(const Char* str)  { return append(str, strSize(str)); }
     Zbase& operator+=(Char ch)          { return append(&ch, 1); }
-    Zbase& operator+=(const std::basic_string_view<Char> str) { return append(str.begin(), str.end()); }
+    Zbase& operator+=(std::basic_string_view<Char> str) { return append(str.begin(), str.end()); }
 
     static const size_t npos = static_cast<size_t>(-1);
 
-    inline friend Zbase operator+(                       const Char* lhs, const Zbase& rhs) { return Zbase(lhs, strLength(lhs),    rhs.c_str(), rhs.size()); }
-    inline friend Zbase operator+(                             Char  lhs, const Zbase& rhs) { return Zbase(&lhs, 1,                rhs.c_str(), rhs.size()); }
-    inline friend Zbase operator+(const std::basic_string_view<Char> lhs, const Zbase& rhs) { return Zbase(lhs.data(), lhs.size(), rhs.c_str(), rhs.size()); }
+    inline friend Zbase operator+(                 const Char* lhs, const Zbase& rhs) { return Zbase(lhs, strSize(lhs),    rhs.c_str(), rhs.size()); }
+    inline friend Zbase operator+(                       Char  lhs, const Zbase& rhs) { return Zbase(&lhs, 1,                rhs.c_str(), rhs.size()); }
+    inline friend Zbase operator+(std::basic_string_view<Char> lhs, const Zbase& rhs) { return Zbase(lhs.data(), lhs.size(), rhs.c_str(), rhs.size()); }
 
 private:
     Zbase              (int) = delete; //
@@ -338,13 +335,13 @@ template <class Char, template <class> class SP> std::strong_ordering operator<=
 template <class Char, template <class> class SP> inline Zbase<Char, SP> operator+(const Zbase<Char, SP>& lhs, const Zbase<Char, SP>& rhs) { return Zbase<Char, SP>(lhs) += rhs; }
 template <class Char, template <class> class SP> inline Zbase<Char, SP> operator+(const Zbase<Char, SP>& lhs, const Char*            rhs) { return Zbase<Char, SP>(lhs) += rhs; }
 template <class Char, template <class> class SP> inline Zbase<Char, SP> operator+(const Zbase<Char, SP>& lhs,       Char             rhs) { return Zbase<Char, SP>(lhs) += rhs; }
-template <class Char, template <class> class SP> inline Zbase<Char, SP> operator+(const Zbase<Char, SP>& lhs, const std::basic_string_view<Char> rhs) { return Zbase<Char, SP>(lhs) += rhs; }
+template <class Char, template <class> class SP> inline Zbase<Char, SP> operator+(const Zbase<Char, SP>& lhs, std::basic_string_view<Char> rhs) { return Zbase<Char, SP>(lhs) += rhs; }
 
 //don't use unified first argument but save one move-construction in the r-value case instead!
 template <class Char, template <class> class SP> inline Zbase<Char, SP> operator+(Zbase<Char, SP>&& lhs, const Zbase<Char, SP>& rhs) { return std::move(lhs += rhs); } //the move *is* needed!!!
 template <class Char, template <class> class SP> inline Zbase<Char, SP> operator+(Zbase<Char, SP>&& lhs, const Char*            rhs) { return std::move(lhs += rhs); } //lhs, is an l-value parameter...
 template <class Char, template <class> class SP> inline Zbase<Char, SP> operator+(Zbase<Char, SP>&& lhs,       Char             rhs) { return std::move(lhs += rhs); } //and not a local variable => no copy elision
-template <class Char, template <class> class SP> inline Zbase<Char, SP> operator+(Zbase<Char, SP>&& lhs, const std::basic_string_view<Char> rhs) { return std::move(lhs += rhs); }
+template <class Char, template <class> class SP> inline Zbase<Char, SP> operator+(Zbase<Char, SP>&& lhs, std::basic_string_view<Char> rhs) { return std::move(lhs += rhs); }
 
 template <class Char, template <class> class SP> inline Zbase<Char, SP> operator+(const Zbase<Char, SP>&, int) = delete; //detect usage errors
 template <class Char, template <class> class SP> inline Zbase<Char, SP> operator+(int, const Zbase<Char, SP>&) = delete; //
@@ -439,7 +436,7 @@ size_t Zbase<Char, SP>::find(const Char* str, size_t pos) const //returns "npos"
     const size_t len = size();
     const Char* thisEnd = begin() + len; //respect embedded 0
     const Char* it = searchFirst(begin() + std::min(pos, len), thisEnd,
-                                 str, str + strLength(str));
+                                 str, str + strSize(str));
     return it == thisEnd ? npos : it - begin();
 }
 
@@ -470,7 +467,7 @@ template <class Char, template <class> class SP> inline
 size_t Zbase<Char, SP>::rfind(const Char* str, size_t pos) const //returns "npos" if not found
 {
     assert(pos == npos || pos <= size());
-    const size_t strLen = strLength(str);
+    const size_t strLen = strSize(str);
     const size_t len = size();
     const Char* currEnd = begin() + (pos == npos ? len : std::min(pos + strLen, len));
     const Char* it = searchLast(begin(), currEnd,
@@ -519,7 +516,7 @@ bool operator==(const Zbase<Char, SP>& lhs, const Zbase<Char, SP>& rhs)
 template <class Char, template <class> class SP> inline
 bool operator==(const Zbase<Char, SP>& lhs, const Char* rhs)
 {
-    return lhs.size() == strLength(rhs) && std::equal(lhs.begin(), lhs.end(), rhs); //respect embedded 0
+    return lhs.size() == strSize(rhs) && std::equal(lhs.begin(), lhs.end(), rhs); //respect embedded 0
 }
 
 
@@ -663,20 +660,23 @@ void Zbase<Char, SP>::pop_back()
 template <class Char, template <class> class SP>
 struct std::hash<zen::Zbase<Char, SP>>
 {
-    using is_transparent = int; //allow heterogenous lookup!
+    using is_transparent = void; //allow heterogenous lookup!
 
     template <class String>
-    size_t operator()(const String& str) const { return zen::hashString<size_t>(str); }
+    size_t operator()(const String& str) const
+    {
+        //caveat: hashBinaryString() depends on binary representation! hashBinaryString("abc") != hashBinaryString(L"abc")!!!
+        static_assert(std::is_same_v<zen::GetCharTypeT<String>, Char>);
+        return zen::hashBinaryString<size_t>(str);
+    }
 };
 
 
 template <class Char, template <class> class SP>
 struct std::equal_to<zen::Zbase<Char, SP>>
 {
-    using is_transparent = int; //enable heterogenous lookup!
+    using is_transparent = void; //enable heterogenous lookup!
 
     template <class String1, class String2>
-    bool operator()(const String1& lhs, const String2& rhs) const { return zen::equalString(lhs, rhs); }
+    bool operator()(const String1& lhs, const String2& rhs) const { return std::equal_to<>{}(lhs, rhs); }
 };
-
-#endif //STRING_BASE_H_083217454562342526

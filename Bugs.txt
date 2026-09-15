@@ -5,7 +5,7 @@ the ones mentioned below. The remaining issues that are yet to be fixed are list
 
 
 -----------------
-| libcurl 8.11.1|
+| libcurl 8.21.0|
 -----------------
 __________________________________________________________________________________________________________
 /lib/ftp.c
@@ -43,19 +43,15 @@ https://github.com/curl/curl/issues/4342
 - result = ftp_nb_type(conn, TRUE, FTP_LIST_TYPE);
 + result = ftp_nb_type(conn, data->set.prefer_ascii, FTP_LIST_TYPE);
 
+-                    result = ftp_nb_type(data, ftpc, ftp, TRUE,
++                    result = ftp_nb_type(data, ftpc, ftp, data->state.prefer_ascii,
+
 __________________________________________________________________________________________________________
 
 
-------------------
-| libssh2 1.11.1 |
-------------------
-__________________________________________________________________________________________________________
-src/session.c
-memory leak: https://github.com/libssh2/libssh2/issues/28
-
--if (session->state & LIBSSH2_STATE_NEWKEYS)
-+//if (session->state & LIBSSH2_STATE_NEWKEYS)
-
+----------------------
+| libssh2 1.11.2_DEV |
+----------------------
 __________________________________________________________________________________________________________
 move the following constants from src/sftp.h to include/libssh2_sftp.h:
 
@@ -65,7 +61,7 @@ ________________________________________________________________________________
 
 
 -------------------
-| wxWidgets 3.3.0 |
+| wxWidgets 3.3.3 |
 -------------------
 __________________________________________________________________________________________________________
 /include/wx/settings.h
@@ -92,15 +88,6 @@ public:
 +
 +        return wxSystemSettingsNative::GetColour(index);
 +    }
-
-__________________________________________________________________________________________________________
-/include/wx/features.h
-wxWidgets/GTK2 on some Linux systems incorrectly detects high DPI: https://freefilesync.org/forum/viewtopic.php?t=6114
-=> hack away high-DPI support for GTK2 (= pretend GTK2 has device independent pixels, which it clearly has not!)
-
-+ #if defined(__WXGTK20__)
-+     #define wxHAS_DPI_INDEPENDENT_PIXELS
-+ #endif
 
 __________________________________________________________________________________________________________
 /src/aui/framemanager.cpp:
@@ -159,6 +146,24 @@ Fix incorrect pane height calculations:
 +
 +        dock.min_size = dock_min_size;
 
+__________________________________________________________________________________________________________
+/src/common/stattextcmn.cpp
+Fix wxStaticText::Wrap doing nothing when updating text:
+
+bool wxStaticTextBase::UpdateLabelOrig(const wxString& label)
+{
+    if ( label == m_labelOrig )
+        return false;
+
+    m_labelOrig = label;
+
+    // We need to clear the existing unwrapped label as it doesn't correspond
+    // to the new value of the actual label any longer.
+    m_unwrappedLabel.clear();
++	m_currentWrap = 0;
+
+    return true;
+}
 __________________________________________________________________________________________________________
 /src/gtk/menu.cpp
 

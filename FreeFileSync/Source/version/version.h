@@ -1,10 +1,7 @@
-#ifndef VERSION_HEADER_434343489702544325
-#define VERSION_HEADER_434343489702544325
+#pragma once
 
 namespace fff
 {
-const char ffsVersion[] = "14.3"; //internal linkage!
+const char ffsVersion[] = "14.12"; //internal linkage!
 const char FFS_VERSION_SEPARATOR = '.';
 }
-
-#endif

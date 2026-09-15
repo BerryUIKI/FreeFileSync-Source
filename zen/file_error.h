@@ -3,12 +3,9 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef FILE_ERROR_H_839567308565656789
-#define FILE_ERROR_H_839567308565656789
+#pragma once
 
 #include "sys_error.h" //we'll need this later anyway!
-
 
 namespace zen
 {
@@ -46,5 +43,3 @@ inline std::wstring fmtPath(const std::wstring& displayPath) { return L'"' + dis
 inline std::wstring fmtPath(const Zstring& displayPath) { return fmtPath(utfTo<std::wstring>(displayPath)); }
 inline std::wstring fmtPath(const wchar_t* displayPath) { return fmtPath(std::wstring(displayPath)); } //resolve overload ambiguity
 }
-
-#endif //FILE_ERROR_H_839567308565656789

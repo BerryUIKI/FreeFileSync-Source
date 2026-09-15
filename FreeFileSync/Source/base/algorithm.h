@@ -3,16 +3,12 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
+#pragma once
 
-#ifndef ALGORITHM_H_34218518475321452548
-#define ALGORITHM_H_34218518475321452548
-
-#include <span>
 #include "structures.h"
 #include "file_hierarchy.h"
 #include "soft_filter.h"
 #include "process_callback.h"
-
 
 namespace fff
 {
@@ -108,4 +104,3 @@ private:
     Zstring tempFolderPath_;
 };
 }
-#endif //ALGORITHM_H_34218518475321452548

@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef FILE_ACCESS_H_8017341345614857
-#define FILE_ACCESS_H_8017341345614857
+#pragma once
 
 #include "file_path.h" //we'll need this later anyway!
 #include "file_error.h"
@@ -95,5 +93,3 @@ FileCopyResult copyNewFile(const Zstring& sourceFile, const Zstring& targetFile,
                            //accummulated delta != file size! consider ADS, sparse, compressed files
                            const IoCallback& notifyUnbufferedIO /*throw X*/);
 }
-
-#endif //FILE_ACCESS_H_8017341345614857

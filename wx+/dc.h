@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef DC_H_4987123956832143243214
-#define DC_H_4987123956832143243214
+#pragma once
 
 #include <variant>
 #include <unordered_map>
@@ -42,10 +40,13 @@ void drawFilledRectangle(wxDC& dc, wxRect rect, const wxColor& innerCol, const w
         rect.height > 0)
     {
         dc.SetPen(*wxTRANSPARENT_PEN);
-        dc.SetBrush(borderCol);
-        dc.DrawRectangle(rect);
 
-        rect.Deflate(borderSize); //more wxWidgets design mistakes: behavior of wxRect::Deflate depends on object being const/non-const!!!
+        if (borderSize > 0)
+        {
+            dc.SetBrush(borderCol);
+            dc.DrawRectangle(rect);
+            rect.Deflate(borderSize); //more wxWidgets design mistakes: behavior of wxRect::Deflate depends on object being const/non-const!!!
+        }
 
         if (rect.width  > 0 &&
             rect.height > 0)
@@ -58,28 +59,31 @@ void drawFilledRectangle(wxDC& dc, wxRect rect, const wxColor& innerCol, const w
 
 
 inline
-void drawRectangleBorder(wxDC& dc, const wxRect& rect, const wxColor& col, int borderSize)
+void drawRectangleBorder(wxDC& dc, const wxRect& rect, const wxColor& col, int borderSize, int sides = wxALL)
 {
     assert(col.IsSolid());
     if (rect.width  > 0 &&
-        rect.height > 0)
+        rect.height > 0 &&
+        borderSize > 0)
     {
-        if (2 * borderSize >= std::min(rect.width, rect.height))
-            return clearArea(dc, rect, col);
-
         dc.SetPen(*wxTRANSPARENT_PEN);
         dc.SetBrush(col);
-        dc.DrawRectangle(rect.x, rect.y,                           borderSize, rect.height); //left
-        dc.DrawRectangle(rect.x + rect.width - borderSize, rect.y, borderSize, rect.height); //right
-        dc.DrawRectangle(rect.x, rect.y,                            rect.width, borderSize); //top
-        dc.DrawRectangle(rect.x, rect.y + rect.height - borderSize, rect.width, borderSize); //bottom
+
+        if ((((sides & wxLEFT) ? borderSize : 0) + ((sides & wxRIGHT ) ? borderSize : 0) >= rect.width) ||
+            (((sides & wxTOP ) ? borderSize : 0) + ((sides & wxBOTTOM) ? borderSize : 0) >= rect.height))
+            return dc.DrawRectangle(rect);
+
+        if (sides & wxLEFT)   dc.DrawRectangle(rect.x, rect.y,                           borderSize, rect.height);
+        if (sides & wxRIGHT)  dc.DrawRectangle(rect.x + rect.width - borderSize, rect.y, borderSize, rect.height);
+        if (sides & wxTOP)    dc.DrawRectangle(rect.x, rect.y,                            rect.width, borderSize);
+        if (sides & wxBOTTOM) dc.DrawRectangle(rect.x, rect.y + rect.height - borderSize, rect.width, borderSize);
     }
 }
 
 
 /*  figure out wxWidgets cross-platform high DPI mess:
 
-    1. "wxsize"    := what wxWidgets is using: device-dependent on Windows, device-indepent on macOS (...mostly)
+    1. "wxsize"    := what wxWidgets is using: device-dependent on Windows, device-indepent on GTK3/macOS (...mostly)
     2. screen unit := device-dependent size in pixels
     3. DIP         := device-independent pixels
 
@@ -91,12 +95,21 @@ void drawRectangleBorder(wxDC& dc, const wxRect& rect, const wxColor& col, int b
 inline
 double getScreenDpiScale()
 {
-    //GTK2 doesn't properly support high DPI: https://freefilesync.org/forum/viewtopic.php?t=6114
-    //=> requires general fix at wxWidgets-level
+    assert(wxTheApp); //only call after wxWidgets was initalized!
+    static const double scale = []
+    {
+        /* Standard DPI:
+             Windows/Ubuntu: 96 x 96
+             macOS: wxWidgets uses DIP (note: wxScreenDC().GetPPI() returns 72 x 72 which is a lie; looks like 96 x 96)       */
+        constexpr int defaultDpi = 96; //on Windows same as wxDisplay::GetStdPPIValue() (however returns 72 on macOS!)
 
-    //https://github.com/wxWidgets/wxWidgets/blob/d9d05c2bb201078f5e762c42458ca2f74af5b322/include/wx/window.h#L2060
-    const double scale = 1.0; //e.g. macOS, GTK3
-
+        const int dpiY = wxScreenDC().GetPPI().y; //perf: buffering for calls to ::GetDeviceCaps() needed!?
+        return static_cast<double>(dpiY) / defaultDpi;
+    }();
+    /* wxScreenDC().GetContentScaleFactor():
+          Windows: always returns 1, despite 140% desktop scaling!
+          Linux:   always returns 1, even with display scale set to 200% on Ubuntu!
+                   Caveat: fractional scaling apparently ignored => behaves like 100%       */
     return scale;
 }
 
@@ -104,6 +117,7 @@ double getScreenDpiScale()
 inline
 double getWxsizeDpiScale()
 {
+    //https://github.com/wxWidgets/wxWidgets/blob/d9d05c2bb201078f5e762c42458ca2f74af5b322/include/wx/window.h#L2060
 #ifndef wxHAS_DPI_INDEPENDENT_PIXELS
 #error why is wxHAS_DPI_INDEPENDENT_PIXELS not defined?
 #endif
@@ -131,7 +145,7 @@ int getDpiScalePercent()
 
 
 inline
-wxBitmap toScaledBitmap(const wxImage& img /*expected to be DPI-scaled!*/)
+wxBitmap toDpiScaledBitmap(const wxImage& img /*expected to be DPI-scaled!*/)
 {
     //wxBitmap(const wxImage& image, int depth = -1, double WXUNUSED(scale) = 1.0) => wxWidgets just ignores scale parameter! WTF!
     wxBitmap bmpScaled(img);
@@ -160,6 +174,35 @@ wxRect getIntersection(const wxRect& rect1, const wxRect& rect2)
 }
 
 
+inline
+wxSize getIntersection(const wxSize& sz1, const wxSize& sz2)
+{
+    return {std::min(sz1.x, sz2.x), std::min(sz1.y, sz2.y)};
+}
+
+
+inline
+wxRect getBoundingBox(const wxRect& rect1, const wxRect& rect2)
+{
+    return rect1.Union(rect2); //another misnomer
+}
+
+
+inline
+wxSize getMaxSize(const wxSize& sz1, const wxSize& sz2)
+{
+    return {std::max(sz1.x, sz2.x), std::max(sz1.y, sz2.y)};
+}
+
+
+inline //work around yet another wxWidgets screw up: WTF does "operator-(wxPoint, wxPoint)" return wxPoint instead of wxSize!??
+wxSize subtract(const wxPoint& lhs, const wxPoint& rhs)
+{
+    return wxSize{lhs.x - rhs.x, lhs.y - rhs.y};
+}
+
+
+
 //---------------------- implementation ------------------------
 class RecursiveDcClipper //wxDCClipper does *not* stack => fix for yet another poor wxWidgets implementation:
 {
@@ -172,13 +215,13 @@ public:
             oldRect_ = it->second;
 
             const wxRect tmp = getIntersection(r, *oldRect_); //better safe than sorry
-            assert(!tmp.IsEmpty()); //"setting an empty clipping region is equivalent to DestroyClippingRegion()"
-
             if (tmp != *oldRect_)
             {
                 dc.SetClippingRegion(tmp); //new clipping region is intersection of given and previously set regions
+                assert(!tmp.IsEmpty()); //"setting an empty clipping region is equivalent to DestroyClippingRegion()" => WRONG!
+                //this is outdated wxBullshit. Works as expected on Windows/macOS/Linux. nevertheless let's see if this ever happens at all!
                 it->second = tmp;
-                clippingDone = true;
+                clippingDone_ = true;
             }
         }
         else
@@ -198,13 +241,12 @@ public:
             //caveat: actual clipping region is smaller when rect is partially outside the DC
             //=> ensure consistency for validateClippingBuffer()
             const wxRect tmp = getIntersection(r, oldRect_? *oldRect_ : dcArea);
-            assert(!tmp.IsEmpty());
-
             if (tmp != (oldRect_? *oldRect_ : dcArea))
             {
                 dc.SetClippingRegion(tmp);
+                assert(!tmp.IsEmpty());
                 clippingAreas_.emplace(&dc, tmp);
-                clippingDone = true;
+                clippingDone_ = true;
                 recursionBegin_ = true;
             }
         }
@@ -212,7 +254,7 @@ public:
 
     ~RecursiveDcClipper()
     {
-        if (clippingDone)
+        if (clippingDone_)
         {
             dc_.DestroyClippingRegion();
             if (oldRect_)
@@ -234,7 +276,7 @@ private:
     inline static std::unordered_map<wxDC*, wxRect> clippingAreas_;
 
     bool recursionBegin_ = false;
-    bool clippingDone = false;
+    bool clippingDone_ = false;
     std::optional<wxRect> oldRect_;
     wxDC& dc_;
 };
@@ -299,6 +341,7 @@ public:
     {
         assert(wnd.IsDoubleBuffered());
         dc_.emplace<wxPaintDC>(&wnd);
+        static_cast<wxDC&>(*this).DisableAutomaticBoundingBoxUpdates(); //MOOOAAAR perf!?
     }
 
     operator wxDC& ()
@@ -312,5 +355,3 @@ private:
     std::variant<std::monostate, wxPaintDC, BufferedPaintDC> dc_;
 };
 }
-
-#endif //DC_H_4987123956832143243214

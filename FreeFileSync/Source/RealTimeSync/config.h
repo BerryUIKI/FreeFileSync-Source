@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef XML_PROC_H_0813748158321813490
-#define XML_PROC_H_0813748158321813490
+#pragma once
 
 #include <vector>
 #include <zen/zstring.h>
@@ -36,5 +34,3 @@ struct GlobalConfig
 };
 GlobalConfig getGlobalConfig(); //throw FileError
 }
-
-#endif //XML_PROC_H_0813748158321813490

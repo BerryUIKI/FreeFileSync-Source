@@ -102,19 +102,14 @@ std::vector<std::pair<std::string, std::string>> geHttpPostParameters() //throw 
 
     params.emplace_back("os_name", "Linux");
 
-    const OsVersion osv = getOsVersion();
-    params.emplace_back("os_version", numberTo<std::string>(osv.major) + "." + numberTo<std::string>(osv.minor));
+    const OsVersionDetail verDetail = getOsVersion();
+    params.emplace_back("os_version",
+                        numberTo<std::string>(verDetail.version.major) + "." + numberTo<std::string>(verDetail.version.minor));
 
     const char* osArch = cpuArchName;
     params.emplace_back("os_arch", osArch);
 
-#if GTK_MAJOR_VERSION == 2
-    //GetContentScaleFactor() requires GTK3 or later
-#elif GTK_MAJOR_VERSION == 3
-    params.emplace_back("dip_scale", numberTo<std::string>(wxScreenDC().GetContentScaleFactor()));
-#else
-#error unknown GTK version!
-#endif
+    params.emplace_back("dip_scale", numberTo<std::string>(getScreenDpiScale()));
 
     const std::string ffsLang = []
     {
@@ -188,7 +183,7 @@ std::string getUnknownVersionTag()
 
 bool fff::haveNewerVersionOnline(const std::string& onlineVersion)
 {
-    auto parseVersion = [](const std::string_view& version)
+    auto parseVersion = [](const std::string_view version)
     {
         std::vector<size_t> output;
         split(version, FFS_VERSION_SEPARATOR,

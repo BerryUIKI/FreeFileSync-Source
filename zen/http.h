@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef HTTP_H_879083425703425702
-#define HTTP_H_879083425703425702
+#pragma once
 
 #include "sys_error.h"
 #include "serialize.h"
@@ -50,11 +48,9 @@ HttpInputStream sendHttpPost(const Zstring& url,
 
 bool internetIsAlive(); //noexcept
 std::wstring formatHttpError(int httpStatus);
-bool isValidEmail(const std::string_view& email);
-std::string htmlSpecialChars(const std::string_view& str);
+bool isValidEmail(const std::string_view email);
+std::string htmlSpecialChars(const std::string_view str);
 
 std::string xWwwFormUrlEncode(const std::vector<std::pair<std::string, std::string>>& paramPairs);
 std::vector<std::pair<std::string, std::string>> xWwwFormUrlDecode(const std::string_view str);
 }
-
-#endif //HTTP_H_879083425703425702

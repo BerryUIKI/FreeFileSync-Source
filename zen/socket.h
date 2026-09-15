@@ -3,18 +3,14 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef SOCKET_H_23498325972583947678456437
-#define SOCKET_H_23498325972583947678456437
+#pragma once
 
 #include "sys_error.h"
     #include <idn2.h>
-    #undef G_GNUC_UNUSED //defined in idn2.h: clashes with glib.h
     #include <unistd.h> //close
     #include <sys/socket.h>
     #include <netinet/tcp.h> //TCP_NODELAY
     #include <netdb.h> //getaddrinfo
-
 
 namespace zen
 {
@@ -35,24 +31,24 @@ std::wstring formatGaiErrorCode(int ec)
 {
     switch (ec) //codes used on both Linux and macOS
     {
-            ZEN_CHECK_CASE_FOR_CONSTANT(EAI_ADDRFAMILY);
-            ZEN_CHECK_CASE_FOR_CONSTANT(EAI_AGAIN);
-            ZEN_CHECK_CASE_FOR_CONSTANT(EAI_BADFLAGS);
-            ZEN_CHECK_CASE_FOR_CONSTANT(EAI_FAIL);
-            ZEN_CHECK_CASE_FOR_CONSTANT(EAI_FAMILY);
-            ZEN_CHECK_CASE_FOR_CONSTANT(EAI_MEMORY);
-            ZEN_CHECK_CASE_FOR_CONSTANT(EAI_NODATA);
-            ZEN_CHECK_CASE_FOR_CONSTANT(EAI_NONAME);
-            ZEN_CHECK_CASE_FOR_CONSTANT(EAI_SERVICE);
-            ZEN_CHECK_CASE_FOR_CONSTANT(EAI_SOCKTYPE);
-            ZEN_CHECK_CASE_FOR_CONSTANT(EAI_SYSTEM);
-            ZEN_CHECK_CASE_FOR_CONSTANT(EAI_OVERFLOW);
-            ZEN_CHECK_CASE_FOR_CONSTANT(EAI_INPROGRESS);
-            ZEN_CHECK_CASE_FOR_CONSTANT(EAI_CANCELED);
-            ZEN_CHECK_CASE_FOR_CONSTANT(EAI_NOTCANCELED);
-            ZEN_CHECK_CASE_FOR_CONSTANT(EAI_ALLDONE);
-            ZEN_CHECK_CASE_FOR_CONSTANT(EAI_INTR);
-            ZEN_CHECK_CASE_FOR_CONSTANT(EAI_IDN_ENCODE);
+            ZEN_CASE_RETURN_STRING(EAI_ADDRFAMILY);
+            ZEN_CASE_RETURN_STRING(EAI_AGAIN);
+            ZEN_CASE_RETURN_STRING(EAI_BADFLAGS);
+            ZEN_CASE_RETURN_STRING(EAI_FAIL);
+            ZEN_CASE_RETURN_STRING(EAI_FAMILY);
+            ZEN_CASE_RETURN_STRING(EAI_MEMORY);
+            ZEN_CASE_RETURN_STRING(EAI_NODATA);
+            ZEN_CASE_RETURN_STRING(EAI_NONAME);
+            ZEN_CASE_RETURN_STRING(EAI_SERVICE);
+            ZEN_CASE_RETURN_STRING(EAI_SOCKTYPE);
+            ZEN_CASE_RETURN_STRING(EAI_SYSTEM);
+            ZEN_CASE_RETURN_STRING(EAI_OVERFLOW);
+            ZEN_CASE_RETURN_STRING(EAI_INPROGRESS);
+            ZEN_CASE_RETURN_STRING(EAI_CANCELED);
+            ZEN_CASE_RETURN_STRING(EAI_NOTCANCELED);
+            ZEN_CASE_RETURN_STRING(EAI_ALLDONE);
+            ZEN_CASE_RETURN_STRING(EAI_INTR);
+            ZEN_CASE_RETURN_STRING(EAI_IDN_ENCODE);
         default:
             return replaceCpy(_("Error code %x"), L"%x", numberTo<std::wstring>(ec));
     }
@@ -283,5 +279,3 @@ void setNonBlocking(SocketType socket, bool nonBlocking) //throw SysError
         THROW_LAST_SYS_ERROR(nonBlocking ? "fcntl(F_SETFL, O_NONBLOCK)" : "fcntl(F_SETFL, ~O_NONBLOCK)");
 }
 }
-
-#endif //SOCKET_H_23498325972583947678456437

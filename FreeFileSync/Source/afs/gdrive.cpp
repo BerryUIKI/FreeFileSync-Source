@@ -6,8 +6,6 @@
 
 #include "gdrive.h"
 #include <variant>
-#include <unordered_set> //needed by clang
-#include <unordered_map> //
 #include <libcurl/curl_wrap.h> //DON'T include <curl/curl.h> directly!
 #include <zen/base64.h>
 #include <zen/file_access.h>
@@ -67,8 +65,8 @@ using PathBlockType  = PathAccessLocker<GdriveRawPath>::BlockType;
 
 namespace
 {
-//Google Drive REST API Overview:  https://developers.google.com/drive/api/v3/about-sdk
-//Google Drive REST API Reference: https://developers.google.com/drive/api/v3/reference
+//Google Drive REST API Overview:  https://developers.google.com/workspace/drive/api/guides/about-sdk
+//Google Drive REST API Reference: https://developers.google.com/workspace/drive/api/reference/rest/v3
 const Zchar* GOOGLE_REST_API_SERVER = Zstr("www.googleapis.com");
 
 constexpr std::chrono::seconds HTTP_SESSION_MAX_IDLE_TIME  (20);
@@ -176,7 +174,7 @@ AFS::FingerPrint getGdriveFilePrint(const std::string& itemId)
 {
     assert(!itemId.empty());
     //Google Drive item ID is persistent and globally unique! :)
-    return hashString<AFS::FingerPrint>(itemId);
+    return hashBinaryString<AFS::FingerPrint>(itemId);
 }
 
 //----------------------------------------------------------------------------------------------------------------
@@ -191,12 +189,7 @@ class HttpSessionManager //reuse (healthy) HTTP sessions globally
 {
 public:
     explicit HttpSessionManager(const Zstring& caCertFilePath) :
-        caCertFilePath_(caCertFilePath),
-        sessionCleaner_([this]
-    {
-        setCurrentThreadName(Zstr("Session Cleaner[HTTP]"));
-        runGlobalSessionCleanUp(); //throw ThreadStopRequest
-    }) {}
+        caCertFilePath_(caCertFilePath) {}
 
     void access(const HttpSessionId& sessionId, const std::function<void(HttpSession& session)>& useHttpSession /*throw X*/) //throw SysError, X
     {
@@ -213,6 +206,8 @@ public:
                 /**/                    sessions.pop_back();
             }
         });
+
+        startGlobalSessionCleanUp();
 
         //create new HTTP session outside the lock: 1. don't block other threads 2. non-atomic regarding "sessionCache"! => one session too many is not a problem!
         if (!httpSession)
@@ -257,47 +252,55 @@ private:
     }
 
     //run a dedicated clean-up thread => it's unclear when the server let's a connection time out, so we do it preemptively
-    //context of worker thread:
-    void runGlobalSessionCleanUp() //throw ThreadStopRequest
+    void startGlobalSessionCleanUp()
     {
-        std::chrono::steady_clock::time_point lastCleanupTime;
-        for (;;)
+        static constinit std::once_flag onceStartThread; //=> no "magic static" code gen
+        std::call_once(onceStartThread, [this]
         {
-            const auto now = std::chrono::steady_clock::now();
-
-            if (now < lastCleanupTime + HTTP_SESSION_CLEANUP_INTERVAL)
-                interruptibleSleep(lastCleanupTime + HTTP_SESSION_CLEANUP_INTERVAL - now); //throw ThreadStopRequest
-
-            lastCleanupTime = std::chrono::steady_clock::now();
-
-            std::vector<Protected<HttpSessionCache>*> sessionCaches; //pointers remain stable, thanks to std::unordered_map<>
-
-            globalSessionCache_.access([&](GlobalHttpSessions& sessionsByCfg)
+            sessionCleaner_ = InterruptibleThread([this]
             {
-                for (auto& [sessionCfg, idleSession] : sessionsByCfg)
-                    sessionCaches.push_back(&idleSession);
-            });
+                setCurrentThreadName(Zstr("Session Cleaner[HTTP]"));
 
-            for (Protected<HttpSessionCache>* sessionCache : sessionCaches)
+                std::chrono::steady_clock::time_point lastCleanupTime;
                 for (;;)
                 {
-                    bool done = false;
-                    sessionCache->access([&](HttpSessionCache& sessions)
+                    const auto now = std::chrono::steady_clock::now();
+
+                    if (now < lastCleanupTime + HTTP_SESSION_CLEANUP_INTERVAL)
+                        interruptibleSleep(lastCleanupTime + HTTP_SESSION_CLEANUP_INTERVAL - now); //throw ThreadStopRequest
+
+                    lastCleanupTime = std::chrono::steady_clock::now();
+
+                    std::vector<Protected<HttpSessionCache>*> sessionCaches; //pointers remain stable, thanks to std::unordered_map<>
+
+                    globalSessionCache_.access([&](GlobalHttpSessions& sessionsByCfg)
                     {
-                        for (std::unique_ptr<HttpInitSession>& sshSession : sessions)
-                            if (!isHealthy(sshSession->session)) //!isHealthy() sessions are destroyed after use => in this context this means they have been idle for too long
-                            {
-                                sshSession.swap(sessions.back());
-                                /**/            sessions.pop_back(); //run ~HttpSession *inside* the lock! => avoid hitting server limits!
-                                return; //don't hold lock for too long: delete only one session at a time, then yield...
-                            }
-                        done = true;
+                        for (auto& [sessionCfg, idleSession] : sessionsByCfg)
+                            sessionCaches.push_back(&idleSession);
                     });
-                    if (done)
-                        break;
-                    std::this_thread::yield();
+
+                    for (Protected<HttpSessionCache>* sessionCache : sessionCaches)
+                        for (;;)
+                        {
+                            bool done = false;
+                            sessionCache->access([&](HttpSessionCache& sessions)
+                            {
+                                for (std::unique_ptr<HttpInitSession>& sshSession : sessions)
+                                    if (!isHealthy(sshSession->session)) //!isHealthy() sessions are destroyed after use => in this context this means they have been idle for too long
+                                    {
+                                        sshSession.swap(sessions.back());
+                                        /**/            sessions.pop_back(); //run ~HttpSession *inside* the lock! => avoid hitting server limits!
+                                        return; //don't hold lock for too long: delete only one session at a time, then yield...
+                                    }
+                                done = true;
+                            });
+                            if (done)
+                                break;
+                            std::this_thread::yield();
+                        }
                 }
-        }
+            });
+        });
     }
 
     using GlobalHttpSessions = std::unordered_map<HttpSessionId, Protected<HttpSessionCache>>;
@@ -324,7 +327,7 @@ HttpSession::Result googleHttpsRequest(const Zstring& serverName, const std::str
                                        std::vector<CurlOption> extraOptions,
                                        const std::function<void  (std::span<const char> buf)>& writeResponse /*throw X*/, //optional
                                        const std::function<size_t(std::span<      char> buf)>& readRequest   /*throw X*/, //optional; return "bytesToRead" bytes unless end of stream!
-                                       const std::function<void(const std::string_view& header)>& receiveHeader /*throw X*/, //optional
+                                       const std::function<void  (const std::string_view   header)>& receiveHeader /*throw X*/, //optional
                                        int timeoutSec)
 {
     //https://developers.google.com/drive/api/v3/performance
@@ -351,7 +354,7 @@ HttpSession::Result gdriveHttpsRequest(const std::string& serverRelPath, //throw
                                        const std::vector<CurlOption>& extraOptions,
                                        const std::function<void  (std::span<const char> buf)>& writeResponse /*throw X*/, //optional
                                        const std::function<size_t(std::span<      char> buf)>& readRequest   /*throw X*/, //optional; return "bytesToRead" bytes unless end of stream!
-                                       const std::function<void(const std::string_view& header)>& receiveHeader /*throw X*/, //optional
+                                       const std::function<void  (const std::string_view   header)>& receiveHeader /*throw X*/, //optional
                                        const GdriveAccess& access)
 {
     extraHeaders.push_back("Authorization: Bearer " + access.token);
@@ -680,7 +683,7 @@ GdriveAccessInfo gdriveAuthorizeAccess(const std::string& gdriveLoginHint, const
             }
             httpResponse = "HTTP/1.0 200 OK"         "\r\n"
                            "Content-Type: text/html" "\r\n"
-                           "Content-Length: " + numberTo<std::string>(strLength(htmlMsg)) + "\r\n"
+                           "Content-Length: " + numberTo<std::string>(strSize(htmlMsg)) + "\r\n"
                            "\r\n" + htmlMsg;
         }
 
@@ -1276,7 +1279,7 @@ void gdriveUnlinkParent(const std::string& itemId, const std::string& parentId, 
 
     JsonValue jresponse;
     try { jresponse = parseJson(response); /*throw JsonParsingError*/ }
-    catch (const JsonParsingError&) {}
+    catch (JsonParsingError&) {}
 
     const std::optional<std::string> id      = getPrimitiveFromJsonObject(jresponse, "id"); //id is returned on "success", unlike "parents", see below...
     const JsonValue*                 parents = getChildFromJsonObject(jresponse, "parents");
@@ -1310,7 +1313,7 @@ void gdriveMoveToTrash(const std::string& itemId, const GdriveAccess& access) //
 
     JsonValue jresponse;
     try { jresponse = parseJson(response); /*throw JsonParsingError*/ }
-    catch (const JsonParsingError&) {}
+    catch (JsonParsingError&) {}
 
     const std::optional<std::string> trashed = getPrimitiveFromJsonObject(jresponse, "trashed");
     if (!trashed || *trashed != "true")
@@ -1328,9 +1331,9 @@ std::string /*folderId*/ gdriveCreateFolderPlain(const Zstring& folderName, cons
         {"fields", "id"},
     });
     JsonValue postParams(JsonValue::Type::object);
-    postParams.objectVal.emplace("mimeType", gdriveFolderMimeType);
-    postParams.objectVal.emplace("name", utfTo<std::string>(folderName));
-    postParams.objectVal.emplace("parents", std::vector<JsonValue> {JsonValue(parentId)});
+    postParams.objectVal.set("mimeType", gdriveFolderMimeType);
+    postParams.objectVal.set("name", utfTo<std::string>(folderName));
+    postParams.objectVal.set("parents", std::vector<JsonValue> {JsonValue(parentId)});
     const std::string& postBuf = serializeJson(postParams, "" /*lineBreak*/, "" /*indent*/);
 
     std::string response;
@@ -1361,13 +1364,13 @@ std::string /*shortcutId*/ gdriveCreateShortcutPlain(const Zstring& shortcutName
         {"fields", "id"},
     });
     JsonValue shortcutDetails(JsonValue::Type::object);
-    shortcutDetails.objectVal.emplace("targetId", targetId);
+    shortcutDetails.objectVal.set("targetId", targetId);
 
     JsonValue postParams(JsonValue::Type::object);
-    postParams.objectVal.emplace("mimeType", gdriveShortcutMimeType);
-    postParams.objectVal.emplace("name", utfTo<std::string>(shortcutName));
-    postParams.objectVal.emplace("parents", std::vector<JsonValue> {JsonValue(parentId)});
-    postParams.objectVal.emplace("shortcutDetails", std::move(shortcutDetails));
+    postParams.objectVal.set("mimeType", gdriveShortcutMimeType);
+    postParams.objectVal.set("name", utfTo<std::string>(shortcutName));
+    postParams.objectVal.set("parents", std::vector<JsonValue> {JsonValue(parentId)});
+    postParams.objectVal.set("shortcutDetails", std::move(shortcutDetails));
     const std::string& postBuf = serializeJson(postParams, "" /*lineBreak*/, "" /*indent*/);
 
     std::string response;
@@ -1405,9 +1408,9 @@ std::string /*fileId*/ gdriveCopyFile(const std::string& fileId, const std::stri
         throw SysError(L"Invalid modification time (time_t: " + numberTo<std::wstring>(newModTime) + L')');
 
     JsonValue postParams(JsonValue::Type::object);
-    postParams.objectVal.emplace("name", utfTo<std::string>(newName));
-    postParams.objectVal.emplace("parents", std::vector<JsonValue> {JsonValue(parentIdTo)});
-    postParams.objectVal.emplace("modifiedTime", modTimeRfc);
+    postParams.objectVal.set("name", utfTo<std::string>(newName));
+    postParams.objectVal.set("parents", std::vector<JsonValue> {JsonValue(parentIdTo)});
+    postParams.objectVal.set("modifiedTime", modTimeRfc);
     const std::string& postBuf = serializeJson(postParams, "" /*lineBreak*/, "" /*indent*/);
 
     std::string response;
@@ -1418,7 +1421,7 @@ std::string /*fileId*/ gdriveCopyFile(const std::string& fileId, const std::stri
 
     JsonValue jresponse;
     try { jresponse = parseJson(response); /*throw JsonParsingError*/ }
-    catch (const JsonParsingError&) {}
+    catch (JsonParsingError&) {}
 
     const std::optional<std::string> itemId = getPrimitiveFromJsonObject(jresponse, "id");
     if (!itemId)
@@ -1455,8 +1458,8 @@ void gdriveMoveAndRenameItem(const std::string& itemId, const std::string& paren
         throw SysError(L"Invalid modification time (time_t: " + numberTo<std::wstring>(newModTime) + L')');
 
     JsonValue postParams(JsonValue::Type::object);
-    postParams.objectVal.emplace("name", utfTo<std::string>(newName));
-    postParams.objectVal.emplace("modifiedTime", modTimeRfc);
+    postParams.objectVal.set("name", utfTo<std::string>(newName));
+    postParams.objectVal.set("modifiedTime", modTimeRfc);
     const std::string& postBuf = serializeJson(postParams, "" /*lineBreak*/, "" /*indent*/);
 
     std::string response;
@@ -1467,7 +1470,7 @@ void gdriveMoveAndRenameItem(const std::string& itemId, const std::string& paren
 
     JsonValue jresponse;
     try { jresponse = parseJson(response); /*throw JsonParsingError*/ }
-    catch (const JsonParsingError&) {}
+    catch (JsonParsingError&) {}
 
     const std::optional<std::string> name    = getPrimitiveFromJsonObject(jresponse, "name");
     const JsonValue*                 parents = getChildFromJsonObject(jresponse, "parents");
@@ -1505,7 +1508,7 @@ void setModTime(const std::string& itemId, time_t modTime, const GdriveAccess& a
 
     JsonValue jresponse;
     try { jresponse = parseJson(response); /*throw JsonParsingError*/ }
-    catch (const JsonParsingError&) {}
+    catch (JsonParsingError&) {}
 
     const std::optional<std::string> modifiedTime = getPrimitiveFromJsonObject(jresponse, "modifiedTime");
     if (!modifiedTime || *modifiedTime != modTimeRfc)
@@ -1715,22 +1718,22 @@ std::string /*itemId*/ gdriveUploadFile(const Zstring& fileName, const std::stri
             {"uploadType", "resumable"},
         });
         JsonValue postParams(JsonValue::Type::object);
-        postParams.objectVal.emplace("name", utfTo<std::string>(fileName));
-        postParams.objectVal.emplace("parents", std::vector<JsonValue> {JsonValue(parentId)});
+        postParams.objectVal.set("name", utfTo<std::string>(fileName));
+        postParams.objectVal.set("parents", std::vector<JsonValue> {JsonValue(parentId)});
         if (modTime) //convert to RFC 3339 date-time: e.g. "2018-09-29T08:39:12.053Z"
         {
             const std::string& modTimeRfc = utfTo<std::string>(formatTime(Zstr("%Y-%m-%dT%H:%M:%S.000Z"), getUtcTime(*modTime))); //returns empty string on error
             if (modTimeRfc.empty())
                 throw SysError(L"Invalid modification time (time_t: " + numberTo<std::wstring>(*modTime) + L')');
 
-            postParams.objectVal.emplace("modifiedTime", modTimeRfc);
+            postParams.objectVal.set("modifiedTime", modTimeRfc);
         }
         const std::string& postBuf = serializeJson(postParams, "" /*lineBreak*/, "" /*indent*/);
         //---------------------------------------------------
 
         std::string uploadUrl;
 
-        auto onHeaderData = [&](const std::string_view& header)
+        auto onHeaderData = [&](const std::string_view header)
         {
             //"The callback will be called once for each header and only complete header lines are passed on to the callback" (including \r\n at the end)
             if (startsWithAsciiNoCase(header, "Location:"))
@@ -1897,7 +1900,7 @@ public:
             details.type     = readNumber<GdriveItemType>(stream); //
             details.owner    = readNumber     <FileOwner>(stream); //
             details.fileSize = readNumber      <uint64_t>(stream); //SysErrorUnexpectedEos
-            details.modTime  = static_cast<time_t>(readNumber<int64_t>(stream)); //
+            details.modTime  = readNumber       <int64_t>(stream); //
             details.targetId = readContainer<std::string>(stream); //
 
             size_t parentsCount = readNumber<uint32_t>(stream); //SysErrorUnexpectedEos
@@ -2481,7 +2484,7 @@ private:
         //getSharedDrives() should be fast enough to avoid the unjustified complexity of change notifications: https://freefilesync.org/forum/viewtopic.php?t=7827&start=30#p29712
         for (const auto& [driveId, driveName] : getSharedDrives(accessBuf_.getAccessToken())) //throw SysError
         {
-            auto fileState = [&, &driveId /*clang bug*/= driveId, &driveName /*clang bug*/= driveName]
+            auto fileState = [&]
             {
                 if (auto it = sharedDrives_.find(driveId);
                     it != sharedDrives_.end())
@@ -2739,12 +2742,10 @@ private:
 
     struct UserSession;
 
-    Zstring getDbFilePath(std::string accountEmail) const
+    Zstring getDbFilePath(const std::string& accountEmail) const
     {
-        for (char& c : accountEmail)
-            c = asciiToLower(c);
         //return appendPath(configDirPath_, utfTo<Zstring>(formatAsHexString(getMd5(utfTo<std::string>(accountEmail)))) + Zstr(".db"));
-        return appendPath(configDirPath_, utfTo<Zstring>(accountEmail) + Zstr(".db"));
+        return appendPath(configDirPath_, utfTo<Zstring>(getAsciiLowerCase(accountEmail)) + Zstr(".db"));
     }
 
     void accessUserSession(const std::string& accountEmail, int timeoutSec, const std::function<void(std::optional<UserSession>& userSession)>& useSession /*throw X*/) //throw SysError, X
@@ -2782,7 +2783,7 @@ private:
 
         try
         {
-            streamOut.ref() += compress(streamOutBody.ref(), 3 /*best compression level: see db_file.cpp*/); //throw SysError
+            streamOut.ref() += compress(streamOutBody.ref(), 4 /*best compression level: see db_file.cpp*/); //throw SysError
         }
         catch (const SysError& e) { throw FileError(replaceCpy(_("Cannot write file %x."), L"%x", fmtPath(dbFilePath)), e.toString()); }
 
@@ -2808,13 +2809,13 @@ private:
         {
             MemoryStreamIn streamIn(byteStream);
             //-------- file format header --------
-            char tmp[sizeof(DB_FILE_DESCR)] = {};
-            readArray(streamIn, &tmp, sizeof(tmp)); //throw SysErrorUnexpectedEos
+            char formatDescr[sizeof(DB_FILE_DESCR)] = {};
+            readArray(streamIn, &formatDescr, sizeof(formatDescr)); //throw SysErrorUnexpectedEos
 
             const std::shared_ptr<int> timeoutSec2 = std::make_shared<int>(timeoutSec); //context option: valid only for duration of this call!
 
             //TODO: remove migration code at some time! 2020-07-03
-            if (!std::equal(std::begin(tmp), std::end(tmp), std::begin(DB_FILE_DESCR)))
+            if (!std::equal(std::begin(formatDescr), std::end(formatDescr), std::begin(DB_FILE_DESCR)))
             {
                 const std::string& uncompressedStream = decompress(byteStream); //throw SysError
                 MemoryStreamIn streamIn2(uncompressedStream);
@@ -2841,7 +2842,7 @@ private:
             }
             else
             {
-                if (!std::equal(std::begin(tmp), std::end(tmp), std::begin(DB_FILE_DESCR)))
+                if (!std::equal(std::begin(formatDescr), std::end(formatDescr), std::begin(DB_FILE_DESCR)))
                     throw SysError(_("File content is corrupted.") + L" (invalid header)");
 
                 const int version = readNumber<int32_t>(streamIn); //throw SysErrorUnexpectedEos
@@ -2849,7 +2850,7 @@ private:
                     version != DB_FILE_VERSION)
                     throw SysError(_("Unsupported data format.") + L' ' + replaceCpy(_("Version: %x"), L"%x", numberTo<std::wstring>(version)));
 
-                const std::string& uncompressedStream = decompress(makeStringView(byteStream.begin() + streamIn.pos(), byteStream.end())); //throw SysError
+                const std::string& uncompressedStream = decompress({streamIn.buf().begin() + streamIn.pos(), streamIn.buf().end()}); //throw SysError
                 MemoryStreamIn streamInBody(uncompressedStream);
 
                 auto accessBuf = makeSharedRef<GdriveAccessBuffer>(streamInBody); //throw SysError
@@ -3047,7 +3048,7 @@ private:
                     if (std::shared_ptr<AFS::TraverserCallback> cbSub = cb.onFolder({itemName, false /*isFollowedSymlink*/})) //throw X
                     {
                         const AfsPath afsItemPath(appendPath(folderPath.value, itemName));
-                        workload_.push_back({afsItemPath, std::move(cbSub)});
+                        workload_.emplace_back(afsItemPath, std::move(cbSub));
                     }
                     break;
 
@@ -3068,7 +3069,7 @@ private:
                             if (targetDetails.type == GdriveItemType::folder)
                             {
                                 if (std::shared_ptr<AFS::TraverserCallback> cbSub = cb.onFolder({itemName, true /*isFollowedSymlink*/})) //throw X
-                                    workload_.push_back({afsItemPath, std::move(cbSub)});
+                                    workload_.emplace_back(afsItemPath, std::move(cbSub));
                             }
                             else //a file or named pipe, etc.
                                 cb.onFile({itemName, targetDetails.fileSize, targetDetails.modTime, getGdriveFilePrint(item.details.targetId), true /*isFollowedSymlink*/}); //throw X
@@ -3100,7 +3101,7 @@ struct InputStreamGdrive : public AFS::InputStream
     explicit InputStreamGdrive(const GdrivePath& gdrivePath) :
         gdrivePath_(gdrivePath)
     {
-        worker_ = InterruptibleThread([asyncStreamOut = this->asyncStreamIn_, gdrivePath]
+        worker_ = InterruptibleThread([asyncStreamOut = asyncStreamIn_, gdrivePath]
         {
             setCurrentThreadName(Zstr("Istream ") + utfTo<Zstring>(getGdriveDisplayPath(gdrivePath)));
             try
@@ -3209,11 +3210,11 @@ struct OutputStreamGdrive : public AFS::OutputStreamImpl
             parentId = ps.existingItemId;
         });
 
-        worker_ = InterruptibleThread([gdrivePath, modTime, fileName, asyncStreamIn = this->asyncStreamOut_,
+        worker_ = InterruptibleThread([gdrivePath, modTime, fileName, asyncStreamIn = asyncStreamOut_,
                                        pFilePrint = std::move(promFilePrint),
                                        parentId   = std::move(parentId),
                                        aai        = std::move(aai),
-                                       pal        = std::move(pal)]() mutable
+                                       pal        = std::move(pal)] mutable
         {
             assert(pal); //bind life time to worker thread!
             setCurrentThreadName(Zstr("Ostream ") + utfTo<Zstring>(getGdriveDisplayPath(gdrivePath)));
@@ -3652,7 +3653,7 @@ private:
     //symlink handling: follow
     //already existing: undefined behavior! (e.g. fail/overwrite/auto-rename)
     //=> actual behavior: 1. fails or 2. creates duplicate (unlikely)
-    FileCopyResult copyFileForSameAfsType(const AfsPath& sourcePath, const StreamAttributes& attrSource, //throw FileError, (ErrorFileLocked), (X)
+    FileCopyResult copyFileForSameAfsType(const AfsPath& sourcePath, const StreamAttributes& sourceAttr, //throw FileError, (ErrorFileLocked), (X)
                                           const AbstractPath& targetPath, bool copyFilePermissions, const IoCallback& notifyUnbufferedIO /*throw X*/) const override
     {
         //no native Google Drive file copy => use stream-based file copy:
@@ -3664,7 +3665,7 @@ private:
         if (!equalAsciiNoCase(gdriveLogin_.email, fsTarget.gdriveLogin_.email))
             //already existing: undefined behavior! (e.g. fail/overwrite/auto-rename)
             //=> actual behavior: 1. fails or 2. creates duplicate (unlikely)
-            return copyFileAsStream(sourcePath, attrSource, targetPath, notifyUnbufferedIO); //throw FileError, (ErrorFileLocked), X
+            return copyFileAsStream(sourcePath, sourceAttr, targetPath, notifyUnbufferedIO); //throw FileError, (ErrorFileLocked), X
         //else: copying files within account works, e.g. between My Drive <-> shared drives
 
         try
@@ -4087,14 +4088,14 @@ AbstractPath fff::createItemPathGdrive(const Zstring& itemPathPhrase) //noexcept
     trim(pathPhrase);
 
     if (startsWithAsciiNoCase(pathPhrase, gdrivePrefix))
-        pathPhrase = pathPhrase.c_str() + strLength(gdrivePrefix);
+        pathPhrase = pathPhrase.c_str() + strSize(gdrivePrefix);
     trim(pathPhrase, TrimSide::left, [](Zchar c) { return c == Zstr('/') || c == Zstr('\\'); });
 
     const ZstringView fullPath = beforeFirst<ZstringView>(pathPhrase, Zstr('|'), IfNotFoundReturn::all);
     const ZstringView options  =  afterFirst<ZstringView>(pathPhrase, Zstr('|'), IfNotFoundReturn::none);
 
     auto it = std::find_if(fullPath.begin(), fullPath.end(), [](Zchar c) { return c == '/' || c == '\\'; });
-    const ZstringView emailAndDrive = makeStringView(fullPath.begin(), it);
+    const ZstringView emailAndDrive(fullPath.begin(), it);
     const AfsPath itemPath = sanitizeDeviceRelativePath({it, fullPath.end()});
 
     GdriveLogin login

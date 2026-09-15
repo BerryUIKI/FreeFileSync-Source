@@ -48,7 +48,6 @@ namespace zen { class ToggleButton; }
 #include <wx/choice.h>
 #include <wx/notebook.h>
 #include <wx/dialog.h>
-#include <wx/tglbtn.h>
 #include <wx/treectrl.h>
 #include <wx/checklst.h>
 #include <wx/grid.h>
@@ -520,9 +519,9 @@ private:
 
 protected:
     wxStaticBitmap* m_bitmapCloud;
-    wxToggleButton* m_toggleBtnGdrive;
-    wxToggleButton* m_toggleBtnSftp;
-    wxToggleButton* m_toggleBtnFtp;
+    zen::ToggleButton* m_toggleBtnGdrive;
+    zen::ToggleButton* m_toggleBtnSftp;
+    zen::ToggleButton* m_toggleBtnFtp;
     wxBoxSizer* bSizerGdrive;
     wxStaticBitmap* m_bitmapGdriveUser;
     wxListBox* m_listBoxGdriveUsers;

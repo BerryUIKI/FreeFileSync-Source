@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef IMPL_HELPER_H_873450978453042524534234
-#define IMPL_HELPER_H_873450978453042524534234
+#pragma once
 
 #include "abstract.h"
 #include <zen/thread.h>
 #include <zen/stream_buffer.h>
-
 
 namespace fff
 {
@@ -150,5 +147,3 @@ private:
 };
 
 }
-
-#endif //IMPL_HELPER_H_873450978453042524534234

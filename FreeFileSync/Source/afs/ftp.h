@@ -3,12 +3,9 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef FTP_H_745895742383425326568678
-#define FTP_H_745895742383425326568678
+#pragma once
 
 #include "abstract.h"
-
 
 namespace fff
 {
@@ -37,5 +34,3 @@ FtpLogin extractFtpLogin(const AfsDevice& afsDevice); //noexcept
 
 AfsPath getFtpHomePath(const FtpLogin& login); //throw FileError
 }
-
-#endif //FTP_H_745895742383425326568678

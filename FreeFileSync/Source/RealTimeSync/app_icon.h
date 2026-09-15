@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef APP_ICON_H_8914578394545342
-#define APP_ICON_H_8914578394545342
+#pragma once
 
 #include <wx/icon.h>
 #include <wx+/image_resources.h>
@@ -23,5 +21,3 @@ wxIcon getRtsIcon() //see FFS/app_icon.h
 
 }
 }
-
-#endif //APP_ICON_H_8914578394545342

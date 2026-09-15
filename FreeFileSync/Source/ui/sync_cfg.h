@@ -3,13 +3,10 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef SYNC_CFG_H_31289470134253425
-#define SYNC_CFG_H_31289470134253425
+#pragma once
 
 #include <wx+/popup_dlg.h>
 #include "../base/structures.h"
-
 
 namespace fff
 {
@@ -62,5 +59,3 @@ zen::ConfirmationButton showSyncConfigDlg(wxWindow* parent,
                                           std::vector<Zstring>& emailHistory,   size_t emailHistoryMax,
                                           std::vector<Zstring>& commandHistory, size_t commandHistoryMax);
 }
-
-#endif //SYNC_CFG_H_31289470134253425

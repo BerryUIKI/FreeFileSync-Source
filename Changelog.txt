@@ -1,3 +1,96 @@
+FreeFileSync 14.12 [2026-09-09]
+-------------------------------
+Further reduced size of database files by 16%
+Improved toggle button layout calculations
+Fixed grid view filters not showing (Linux)
+Fixed text descriptions not wrapping
+Work around ERROR_UNTRUSTED_MOUNT_POINT
+Fixed bitmap buttons being shrinked (macOS)
+
+
+FreeFileSync 14.11 [2026-08-10]
+------------------------------
+Fixed "TLS session resumption required" FTP error
+Log file time errors as "info" after comparing by file content
+Fixed tooltip not being updated during mouse scrolling (macOS, Linux)
+Fixed sluggy mouse scrolling during mouse movement (Linux)
+Skip ADS when failing to copy to ReFS (Windows)
+Updated translation files
+
+
+FreeFileSync 14.10 [2026-06-28]
+------------------------------
+Added CRC32 verification for application resource files
+Improved error reporting when application files become corrupted
+Fixed access denied error for Windows SFTP server
+Updated toolchain and library dependencies to latest versions
+
+
+FreeFileSync 14.9 [2026-03-29]
+------------------------------
+Support 200% display scaling for high-DPI monitors (Linux)
+Trimmed text-to-image bounding box
+Improved center grid tooltip (macOS, Linux)
+Work around "getcwd() failed" for console execute (Linux)
+Fixed calculating main window size and position on exit
+Fixed multi-folder-pair horizontal sizing glitch
+Fixed Donation Edition incorrect activation count (Linux)
+Fixed error during log file cleanup when running multiple FFS instances
+
+
+FreeFileSync 14.8 [2026-02-22]
+------------------------------
+Automatically detect proxy settings for Google Drive (Windows)
+Fixed file filter considering parent folder as match candidate
+Fixed bitmap button being trimmed (Linux)
+Fixed window flash when starting silent batch job (Windows, macOS)
+Try to set modification time on open file handle (Linux, macOS)
+Mitigate invalid main window size and position on startup
+Improved spin control arrow key handling (macOs)
+Run (S)FTP and HTTP session cleanup threads on demand
+Fixed mouse highlight when showing file grid context menu
+Avoid percentage format precision flicker when copying large file
+
+
+FreeFileSync 14.7 [2026-01-21]
+------------------------------
+Shorter lock file abandonment timeout
+Highlight to be created items on file grid
+Fixed file grid selection background
+Support running on Windows 10 PE (Portable Edition)
+Show host name in device listing (Donation Edition)
+Fixed dump file creation when worker threads crash (Windows)
+Fixed whitespace glitches in PDF manual
+Consider Windows Subsystem for Linux as VM
+
+
+FreeFileSync 14.6 [2025-12-02]
+------------------------------
+Write sync statistics to stdout as JSON for .ffs_batch
+Removed precompiled 32-bit bundle (Linux)
+Avoid redundant window centering before finishing layout
+GTK3-based build (Linux)
+Dark mode support with GTK3 (Linux)
+Stream errors to stderr instead of stdout (Linux)
+Installer supports dark mode (Windows)
+Added "New Window" dock menu item (macOS)
+
+
+FreeFileSync 14.5 [2025-10-03]
+------------------------------
+Quotation not needed anymore for external application macros
+Unambiguous license key file extension
+Fixed crash when resizing config panel during comparison
+Fixed log file viewing when config name contains special characters
+Dedicated installer for x86_64-only operating system (Linux)
+
+
+FreeFileSync 14.4 [2025-07-26]
+------------------------------
+Fixed FTP login error "dh key too small"
+Updated all 3rd party libraries to latest versions
+
+
 FreeFileSync 14.3 [2025-03-27]
 ------------------------------
 Support internationalized domain names (IDN) for (S)FTP and email

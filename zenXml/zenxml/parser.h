@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef PARSER_H_81248670213764583021432
-#define PARSER_H_81248670213764583021432
+#pragma once
 
 #include <cstddef> //ptrdiff_t; req. on Linux
 #include <zen/string_tools.h>
 #include "dom.h"
-
 
 namespace zen
 {
@@ -74,7 +71,7 @@ XmlDoc parseXml(const std::string& stream); //throw XmlParsingError
 namespace xml_impl
 {
 template <class Predicate> inline
-std::string normalize(const std::string_view& str, Predicate pred) //pred: unary function taking a char, return true if value shall be encoded as hex
+std::string normalize(const std::string_view str, Predicate pred) //pred: unary function taking a char, return true if value shall be encoded as hex
 {
     std::string output;
     for (const char c : str)
@@ -141,7 +138,7 @@ bool checkEntity(CharIterator& first, CharIterator last, const char (&placeholde
 
 namespace
 {
-std::string denormalize(const std::string_view& str)
+std::string denormalize(const std::string_view str)
 {
     std::string output;
     for (auto it = str.begin(); it != str.end(); ++it)
@@ -348,7 +345,7 @@ public:
 
         if (itNameEnd != pos_)
         {
-            const std::string_view name = makeStringView(pos_, itNameEnd);
+            const std::string_view name(pos_, itNameEnd);
             pos_ = itNameEnd;
             return denormalize(name);
         }
@@ -364,7 +361,7 @@ public:
             return c == '<'  ||
                    c == '>';
         });
-        const std::string_view output = makeStringView(pos_, it);
+        const std::string_view output(pos_, it);
         pos_ = it;
         return denormalize(output);
     }
@@ -378,7 +375,7 @@ public:
                    c == '\'' ||
                    c == '"';
         });
-        const std::string_view output = makeStringView(pos_, it);
+        const std::string_view output(pos_, it);
         pos_ = it;
         return denormalize(output);
     }
@@ -409,7 +406,7 @@ private:
 
     bool startsWith(const std::string& prefix) const
     {
-        return zen::startsWith(makeStringView(pos_, stream_.end()), prefix);
+        return zen::startsWith(std::string_view(pos_, stream_.end()), prefix);
     }
 
     using TokenList = std::vector<std::pair<std::string, Token::Type>>;
@@ -532,7 +529,7 @@ private:
     {
         while (token().type == Token::TK_NAME)
         {
-            const std::string attribName = token().name;
+            std::string attribName = token().name;
             nextToken(); //throw XmlParsingError
 
             consumeToken(Token::TK_EQUAL); //throw XmlParsingError
@@ -541,7 +538,7 @@ private:
             nextToken(); //throw XmlParsingError
 
             consumeToken(Token::TK_QUOTE); //throw XmlParsingError
-            element.setAttribute(attribName, attribValue);
+            element.setAttribute(std::move(attribName), attribValue);
         }
     }
 
@@ -572,5 +569,3 @@ XmlDoc parseXml(const std::string& stream) //throw XmlParsingError
     return xml_impl::XmlParser(stream).parse(); //throw XmlParsingError
 }
 }
-
-#endif //PARSER_H_81248670213764583021432

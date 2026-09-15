@@ -2129,7 +2129,7 @@ ConfigDlgGenerated::ConfigDlgGenerated( wxWindow* parent, wxWindowID id, const w
     ffgSizer111->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 
     wxStaticText* m_staticText12011;
-    m_staticText12011 = new wxStaticText( m_panelSyncSettings, wxID_ANY, _("Create:"), wxDefaultPosition, wxDefaultSize, 0 );
+    m_staticText12011 = new wxStaticText( m_panelSyncSettings, wxID_ANY, _("Created:"), wxDefaultPosition, wxDefaultSize, 0 );
     m_staticText12011->Wrap( -1 );
     ffgSizer111->Add( m_staticText12011, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT, 5 );
 
@@ -2140,7 +2140,7 @@ ConfigDlgGenerated::ConfigDlgGenerated( wxWindow* parent, wxWindowID id, const w
     ffgSizer111->Add( m_bpButtonRightCreate, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5 );
 
     wxStaticText* m_staticText12012;
-    m_staticText12012 = new wxStaticText( m_panelSyncSettings, wxID_ANY, _("Update:"), wxDefaultPosition, wxDefaultSize, 0 );
+    m_staticText12012 = new wxStaticText( m_panelSyncSettings, wxID_ANY, _("Updated:"), wxDefaultPosition, wxDefaultSize, 0 );
     m_staticText12012->Wrap( -1 );
     ffgSizer111->Add( m_staticText12012, 0, wxALIGN_RIGHT|wxALIGN_CENTER_VERTICAL, 5 );
 
@@ -2151,7 +2151,7 @@ ConfigDlgGenerated::ConfigDlgGenerated( wxWindow* parent, wxWindowID id, const w
     ffgSizer111->Add( m_bpButtonRightUpdate, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL, 5 );
 
     wxStaticText* m_staticText12013;
-    m_staticText12013 = new wxStaticText( m_panelSyncSettings, wxID_ANY, _("Delete:"), wxDefaultPosition, wxDefaultSize, 0 );
+    m_staticText12013 = new wxStaticText( m_panelSyncSettings, wxID_ANY, _("Deleted:"), wxDefaultPosition, wxDefaultSize, 0 );
     m_staticText12013->Wrap( -1 );
     ffgSizer111->Add( m_staticText12013, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT, 5 );
 
@@ -2649,8 +2649,6 @@ ConfigDlgGenerated::ConfigDlgGenerated( wxWindow* parent, wxWindowID id, const w
     this->Layout();
     bSizer7->Fit( this );
 
-    this->Centre( wxBOTH );
-
     // Connect Events
     this->Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( ConfigDlgGenerated::onClose ) );
     m_listBoxFolderPair->Connect( wxEVT_KEY_DOWN, wxKeyEventHandler( ConfigDlgGenerated::onListBoxKeyEvent ), NULL, this );
@@ -2740,27 +2738,26 @@ CloudSetupDlgGenerated::CloudSetupDlgGenerated( wxWindow* parent, wxWindowID id,
     m_staticText136->Wrap( -1 );
     bSizer272->Add( m_staticText136, 0, wxTOP|wxRIGHT|wxLEFT, 5 );
 
-    wxBoxSizer* bSizer231;
-    bSizer231 = new wxBoxSizer( wxHORIZONTAL );
+    wxBoxSizer* bSizer2311;
+    bSizer2311 = new wxBoxSizer( wxHORIZONTAL );
 
-    m_toggleBtnGdrive = new wxToggleButton( this, wxID_ANY, _("Google Drive"), wxDefaultPosition, wxDefaultSize, 0 );
-    m_toggleBtnGdrive->SetValue( true );
+    m_toggleBtnGdrive = new zen::ToggleButton( this, wxID_ANY, _("Google Drive"), wxDefaultPosition, wxSize( -1, -1 ), 0 );
     m_toggleBtnGdrive->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
 
-    bSizer231->Add( m_toggleBtnGdrive, 0, wxTOP|wxBOTTOM|wxLEFT|wxEXPAND, 5 );
+    bSizer2311->Add( m_toggleBtnGdrive, 0, wxALL|wxEXPAND, 5 );
 
-    m_toggleBtnSftp = new wxToggleButton( this, wxID_ANY, _("SFTP"), wxDefaultPosition, wxSize( -1, -1 ), 0 );
+    m_toggleBtnSftp = new zen::ToggleButton( this, wxID_ANY, _("SFTP"), wxDefaultPosition, wxSize( -1, -1 ), 0 );
     m_toggleBtnSftp->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
 
-    bSizer231->Add( m_toggleBtnSftp, 0, wxTOP|wxBOTTOM|wxLEFT|wxEXPAND, 5 );
+    bSizer2311->Add( m_toggleBtnSftp, 0, wxTOP|wxBOTTOM|wxRIGHT, 5 );
 
-    m_toggleBtnFtp = new wxToggleButton( this, wxID_ANY, _("FTP"), wxDefaultPosition, wxSize( -1, -1 ), 0 );
+    m_toggleBtnFtp = new zen::ToggleButton( this, wxID_ANY, _("FTP"), wxDefaultPosition, wxSize( -1, -1 ), 0 );
     m_toggleBtnFtp->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
 
-    bSizer231->Add( m_toggleBtnFtp, 0, wxALL|wxEXPAND, 5 );
+    bSizer2311->Add( m_toggleBtnFtp, 0, wxTOP|wxBOTTOM|wxRIGHT, 5 );
 
 
-    bSizer272->Add( bSizer231, 0, 0, 5 );
+    bSizer272->Add( bSizer2311, 1, wxEXPAND, 5 );
 
 
     bSizer72->Add( bSizer272, 0, wxALL, 5 );
@@ -3260,13 +3257,11 @@ CloudSetupDlgGenerated::CloudSetupDlgGenerated( wxWindow* parent, wxWindowID id,
     this->Layout();
     bSizer134->Fit( this );
 
-    this->Centre( wxBOTH );
-
     // Connect Events
     this->Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( CloudSetupDlgGenerated::onClose ) );
-    m_toggleBtnGdrive->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( CloudSetupDlgGenerated::onConnectionGdrive ), NULL, this );
-    m_toggleBtnSftp->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( CloudSetupDlgGenerated::onConnectionSftp ), NULL, this );
-    m_toggleBtnFtp->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( CloudSetupDlgGenerated::onConnectionFtp ), NULL, this );
+    m_toggleBtnGdrive->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CloudSetupDlgGenerated::onConnectionGdrive ), NULL, this );
+    m_toggleBtnSftp->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CloudSetupDlgGenerated::onConnectionSftp ), NULL, this );
+    m_toggleBtnFtp->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CloudSetupDlgGenerated::onConnectionFtp ), NULL, this );
     m_listBoxGdriveUsers->Connect( wxEVT_COMMAND_LISTBOX_SELECTED, wxCommandEventHandler( CloudSetupDlgGenerated::onGdriveUserSelect ), NULL, this );
     m_buttonGdriveAddUser->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CloudSetupDlgGenerated::onGdriveUserAdd ), NULL, this );
     m_buttonGdriveRemoveUser->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CloudSetupDlgGenerated::onGdriveUserRemove ), NULL, this );
@@ -3339,8 +3334,6 @@ AbstractFolderPickerGenerated::AbstractFolderPickerGenerated( wxWindow* parent, 
     this->SetSizer( bSizer134 );
     this->Layout();
     bSizer134->Fit( this );
-
-    this->Centre( wxBOTH );
 
     // Connect Events
     this->Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( AbstractFolderPickerGenerated::onClose ) );
@@ -3574,8 +3567,6 @@ SyncConfirmationDlgGenerated::SyncConfirmationDlgGenerated( wxWindow* parent, wx
     this->SetSizer( bSizer134 );
     this->Layout();
     bSizer134->Fit( this );
-
-    this->Centre( wxBOTH );
 
     // Connect Events
     this->Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( SyncConfirmationDlgGenerated::onClose ) );
@@ -4474,8 +4465,6 @@ BatchDlgGenerated::BatchDlgGenerated( wxWindow* parent, wxWindowID id, const wxS
     this->Layout();
     bSizer54->Fit( this );
 
-    this->Centre( wxBOTH );
-
     // Connect Events
     this->Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( BatchDlgGenerated::onClose ) );
     m_checkBoxRunMinimized->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( BatchDlgGenerated::onToggleRunMinimized ), NULL, this );
@@ -4565,8 +4554,6 @@ DeleteDlgGenerated::DeleteDlgGenerated( wxWindow* parent, wxWindowID id, const w
     this->SetSizer( bSizer24 );
     this->Layout();
     bSizer24->Fit( this );
-
-    this->Centre( wxBOTH );
 
     // Connect Events
     this->Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( DeleteDlgGenerated::onClose ) );
@@ -4693,8 +4680,6 @@ CopyToDlgGenerated::CopyToDlgGenerated( wxWindow* parent, wxWindowID id, const w
     this->Layout();
     bSizer24->Fit( this );
 
-    this->Centre( wxBOTH );
-
     // Connect Events
     this->Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( CopyToDlgGenerated::onClose ) );
     m_buttonOK->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CopyToDlgGenerated::onOkay ), NULL, this );
@@ -4782,8 +4767,6 @@ RenameDlgGenerated::RenameDlgGenerated( wxWindow* parent, wxWindowID id, const w
     this->SetSizer( bSizer24 );
     this->Layout();
     bSizer24->Fit( this );
-
-    this->Centre( wxBOTH );
 
     // Connect Events
     this->Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( RenameDlgGenerated::onClose ) );
@@ -5412,8 +5395,6 @@ OptionsDlgGenerated::OptionsDlgGenerated( wxWindow* parent, wxWindowID id, const
     this->Layout();
     bSizer95->Fit( this );
 
-    this->Centre( wxBOTH );
-
     // Connect Events
     this->Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( OptionsDlgGenerated::onClose ) );
     m_choiceColorTheme->Connect( wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler( OptionsDlgGenerated::onChangeColorTheme ), NULL, this );
@@ -5492,8 +5473,6 @@ SelectTimespanDlgGenerated::SelectTimespanDlgGenerated( wxWindow* parent, wxWind
     this->SetSizer( bSizer96 );
     this->Layout();
     bSizer96->Fit( this );
-
-    this->Centre( wxBOTH );
 
     // Connect Events
     this->Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( SelectTimespanDlgGenerated::onClose ) );
@@ -5713,8 +5692,6 @@ AboutDlgGenerated::AboutDlgGenerated( wxWindow* parent, wxWindowID id, const wxS
     this->Layout();
     bSizer31->Fit( this );
 
-    this->Centre( wxBOTH );
-
     // Connect Events
     this->Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( AboutDlgGenerated::onClose ) );
     m_buttonDonate1->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AboutDlgGenerated::onDonate ), NULL, this );
@@ -5851,8 +5828,6 @@ CfgHighlightDlgGenerated::CfgHighlightDlgGenerated( wxWindow* parent, wxWindowID
     this->Layout();
     bSizer96->Fit( this );
 
-    this->Centre( wxBOTH );
-
     // Connect Events
     this->Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( CfgHighlightDlgGenerated::onClose ) );
     m_buttonOK->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CfgHighlightDlgGenerated::onOkay ), NULL, this );
@@ -5948,8 +5923,6 @@ PasswordPromptDlgGenerated::PasswordPromptDlgGenerated( wxWindow* parent, wxWind
     this->SetSizer( bSizer96 );
     this->Layout();
     bSizer96->Fit( this );
-
-    this->Centre( wxBOTH );
 
     // Connect Events
     this->Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( PasswordPromptDlgGenerated::onClose ) );
@@ -6142,8 +6115,6 @@ ActivationDlgGenerated::ActivationDlgGenerated( wxWindow* parent, wxWindowID id,
     this->Layout();
     bSizer54->Fit( this );
 
-    this->Centre( wxBOTH );
-
     // Connect Events
     this->Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( ActivationDlgGenerated::onClose ) );
     m_buttonActivateOnline->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ActivationDlgGenerated::onActivateOnline ), NULL, this );
@@ -6202,7 +6173,7 @@ WarnAccessRightsMissingDlgGenerated::WarnAccessRightsMissingDlgGenerated( wxWind
     m_staticTextStep2->Wrap( -1 );
     ffgSizer11->Add( m_staticTextStep2, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_CENTER_HORIZONTAL, 5 );
 
-    m_buttonOpenSecurity = new wxButton( m_panel39, wxID_ANY, _("Open Security && Privacy"), wxDefaultPosition, wxDefaultSize, 0 );
+    m_buttonOpenSecurity = new wxButton( m_panel39, wxID_ANY, _("Open Privacy && Security"), wxDefaultPosition, wxDefaultSize, 0 );
     ffgSizer11->Add( m_buttonOpenSecurity, 0, wxALIGN_CENTER_VERTICAL|wxEXPAND, 5 );
 
     m_staticTextStep3 = new wxStaticText( m_panel39, wxID_ANY, _("3."), wxDefaultPosition, wxDefaultSize, 0 );
@@ -6246,8 +6217,6 @@ WarnAccessRightsMissingDlgGenerated::WarnAccessRightsMissingDlgGenerated( wxWind
     this->SetSizer( bSizer330 );
     this->Layout();
     bSizer330->Fit( this );
-
-    this->Centre( wxBOTH );
 
     // Connect Events
     this->Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( WarnAccessRightsMissingDlgGenerated::onClose ) );

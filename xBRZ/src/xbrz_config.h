@@ -14,9 +14,7 @@
 // * of the file, but you are not obligated to do so. If you do not wish to   *
 // * do so, delete this exception statement from your version.                *
 // ****************************************************************************
-
-#ifndef XBRZ_CONFIG_HEADER_284578425345
-#define XBRZ_CONFIG_HEADER_284578425345
+#pragma once
 
 //do NOT include any headers here! used by xBRZ_dll!!!
 
@@ -27,9 +25,9 @@ struct ScalerCfg
     double equalColorTolerance        = 30;
     double centerDirectionBias        = 4;
     double dominantDirectionThreshold = 3.6;
-    double steepDirectionThreshold    = 2.2;
+    double steepDirectionThreshold    = 2.4;
     double testAttribute              = 0; //unused; test new parameters
+
+    bool operator==(const ScalerCfg&) const = default;
 };
 }
-
-#endif

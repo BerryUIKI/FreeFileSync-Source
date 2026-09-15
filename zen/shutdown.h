@@ -3,13 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef SHUTDOWN_H_3423847870238407783265
-#define SHUTDOWN_H_3423847870238407783265
+#pragma once
 
 #include <functional>
-#include "file_error.h"
-
+#include "stl_tools.h"
+//#include "file_error.h" //don't drag in extra_log.h/thread.h dependency
 
 namespace zen
 {
@@ -22,5 +20,3 @@ void onSystemShutdownRegister(      SharedRef<std::function<void()>>&& task) = d
 void onSystemShutdownRunTasks(); //call at appropriate time, e.g. when receiving wxEVT_QUERY_END_SESSION/wxEVT_END_SESSION
 //+ also called by shutdownSystem()
 }
-
-#endif //SHUTDOWN_H_3423847870238407783265

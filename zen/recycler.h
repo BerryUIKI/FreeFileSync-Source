@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef RECYCLER_H_18345067341545
-#define RECYCLER_H_18345067341545
+#pragma once
 
 #include <vector>
 #include <functional>
 #include "file_error.h"
-
 
 namespace zen
 {
@@ -30,5 +27,3 @@ namespace zen
 //fails if item is not existing (anymore)
 void moveToRecycleBin(const Zstring& itemPath); //throw FileError, RecycleBinUnavailable
 }
-
-#endif //RECYCLER_H_18345067341545

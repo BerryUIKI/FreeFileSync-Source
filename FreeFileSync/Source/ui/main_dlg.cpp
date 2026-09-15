@@ -24,11 +24,9 @@
 #include <wx+/bitmap_button.h>
 #include <wx+/app_main.h>
 #include <wx+/toggle_button.h>
-#include <wx+/no_flicker.h>
 #include <wx+/rtl.h>
-#include <wx+/window_layout.h>
-#include <wx+/popup_dlg.h>
 #include <wx+/window_tools.h>
+#include <wx+/popup_dlg.h>
 #include <wx+/image_resources.h>
 #include "cfg_grid.h"
 #include "folder_selector.h"
@@ -480,7 +478,7 @@ void updateTopButton(wxBitmapButton& btn,
     if (highlightCol.IsOk())
         btnImg = layOver(rectangleImage(btnImg.GetSize(), highlightCol), btnImg, wxALIGN_CENTER);
 
-    setImage(btn, btnImg);
+    setButtonLabel(btn, btnImg, 0 /*pad*/);
 }
 }
 
@@ -495,7 +493,7 @@ void MainDialog::create(const GlobalConfig& globalCfg, const Zstring& globalCfgF
     AsyncFirstResult<std::false_type> firstUnavailableFile;
 
     for (const Zstring& filePath : cfgFilePaths)
-        firstUnavailableFile.addJob([filePath]() -> std::optional<std::false_type>
+        firstUnavailableFile.addJob([filePath] -> std::optional<std::false_type>
     {
         try
         {
@@ -631,7 +629,7 @@ void MainDialog::create(const FfsGuiConfig& guiCfg, const std::vector<Zstring>& 
             //check existence of all directories in parallel!
             AsyncFirstResult<std::false_type> firstMissingDir;
             for (const AbstractPath& folderPath : folderPathsToCheck)
-                firstMissingDir.addJob([folderPath]() -> std::optional<std::false_type>
+                firstMissingDir.addJob([folderPath] -> std::optional<std::false_type>
             {
                 try
                 {
@@ -664,14 +662,14 @@ MainDialog::MainDialog(const FfsGuiConfig& guiCfg, const std::vector<Zstring>& c
     imgTrashSmall_([]
 {
     try { return extractWxImage(fff::getTrashIcon(dipToScreen(getMenuIconDipSize()))); /*throw SysError*/ }
-    catch (SysError&) { assert(false); return loadImage("delete_recycler", dipToScreen(getMenuIconDipSize())); }
+    catch ([[maybe_unused]] const SysError& e) { assert(false); return loadImage("delete_recycler", dipToScreen(getMenuIconDipSize())); }
 }
 ()),
 
 imgFileManagerSmall_([]
 {
     try { return extractWxImage(fff::getFileManagerIcon(dipToScreen(getMenuIconDipSize()))); /*throw SysError*/ }
-    catch (SysError&) { assert(false); return loadImage("file_manager", dipToScreen(getMenuIconDipSize())); }
+    catch ([[maybe_unused]] const SysError& e) { assert(false); return loadImage("file_manager", dipToScreen(getMenuIconDipSize())); }
 }())
 {
     SetSizeHints(dipToWxsize(640), dipToWxsize(400));
@@ -697,25 +695,24 @@ imgFileManagerSmall_([]
         return layOver(backImg, loadImage(layoverName, backImg.GetWidth() * 7 / 10), wxALIGN_TOP | wxALIGN_RIGHT);
     };
 
-    setImage(*m_bpButtonCmpConfig,  loadImage("options_compare"));
-    setImage(*m_bpButtonSyncConfig, loadImage("options_sync"));
+    setButtonLabel(*m_bpButtonCmpConfig,  loadImage("options_compare"));
+    setButtonLabel(*m_bpButtonSyncConfig, loadImage("options_sync"));
 
-    setImage(*m_bpButtonCmpContext,        mirrorIfRtl(loadImage("button_arrow_right")));
-    setImage(*m_bpButtonFilterContext,     mirrorIfRtl(loadImage("button_arrow_right")));
-    setImage(*m_bpButtonSyncContext,       mirrorIfRtl(loadImage("button_arrow_right")));
-    setImage(*m_bpButtonViewFilterContext, mirrorIfRtl(loadImage("button_arrow_right")));
+    setButtonLabel(*m_bpButtonCmpContext,        mirrorIfRtl(loadImage("button_arrow_right")), 0 /*pad*/);
+    setButtonLabel(*m_bpButtonFilterContext,     mirrorIfRtl(loadImage("button_arrow_right")), 0 /*pad*/);
+    setButtonLabel(*m_bpButtonSyncContext,       mirrorIfRtl(loadImage("button_arrow_right")), 0 /*pad*/);
+    setButtonLabel(*m_bpButtonViewFilterContext, mirrorIfRtl(loadImage("button_arrow_right")), 0 /*pad*/);
 
     //m_bpButtonNew      ->set dynamically
-    setImage(*m_bpButtonOpen, loadImage("cfg_load"));
+    setButtonLabel(*m_bpButtonOpen, loadImage("cfg_load"), dipToWxsize(3) /*pad*/);
     //m_bpButtonSave     ->set dynamically
-    setImage(*m_bpButtonSaveAs,      generateSaveAsImage("start_sync"));
-    setImage(*m_bpButtonSaveAsBatch, generateSaveAsImage("cfg_batch"));
+    setButtonLabel(*m_bpButtonSaveAs,      generateSaveAsImage("start_sync"), dipToWxsize(3) /*pad*/);
+    setButtonLabel(*m_bpButtonSaveAsBatch, generateSaveAsImage("cfg_batch"),  dipToWxsize(3) /*pad*/);
 
-    setImage(*m_bpButtonAddPair,    loadImage("item_add"));
-    setImage(*m_bpButtonHideSearch, loadImage("close_panel"));
-    //setImage(*m_bpButtonToggleLog,  loadImage("log_file"));
+    setButtonLabel(*m_bpButtonAddPair,    loadImage("item_add"),    0 /*pad*/);
+    setButtonLabel(*m_bpButtonHideSearch, loadImage("close_panel"), 0 /*pad*/);
+    //setButtonLabel(*m_bpButtonToggleLog,  loadImage("log_file"));
 
-    m_bpButtonFilter   ->SetMinSize({screenToWxsize(loadImage("options_filter").GetWidth()) + dipToWxsize(27), -1}); //make the filter button wider
     m_textCtrlSearchTxt->SetMinSize({dipToWxsize(220), -1});
 
     //----------------------------------------------------------------------------------------
@@ -728,7 +725,7 @@ imgFileManagerSmall_([]
         return stackImages(labelImage, mirrorIfRtl(loadImage(imgName)), ImageStackLayout::vertical, ImageStackAlignment::center);
     };
     m_bpButtonViewType->init(generateViewTypeImage("viewtype_sync_action"),
-                             generateViewTypeImage("viewtype_cmp_result"));
+                             generateViewTypeImage("viewtype_cmp_result"), dipToWxsize(1) /*pad*/);
     //tooltip is updated dynamically in setViewTypeSyncAction()
     //----------------------------------------------------------------------------------------
     m_bpButtonShowExcluded  ->SetToolTip(_("Show filtered or temporarily excluded files"));
@@ -831,9 +828,7 @@ imgFileManagerSmall_([]
     updateTopButton(*m_buttonCompare, loadImage("compare"), getVariantName(CompareVariant::timeSize), "cmp_time", nullptr /*extraIconName*/, wxNullColour);
     m_panelTopButtons->GetSizer()->SetSizeHints(m_panelTopButtons); //~=Fit() + SetMinSize()
 
-    m_buttonCancel->SetMinSize({std::max(m_buttonCancel->GetSize().x, dipToWxsize(TOP_BUTTON_OPTIMAL_WIDTH_DIP)),
-                                std::max(m_buttonCancel->GetSize().y, m_buttonCompare->GetSize().y)
-                               });
+    m_buttonCancel->SetMinSize(getMaxSize(m_buttonCancel->GetSize(), {dipToWxsize(TOP_BUTTON_OPTIMAL_WIDTH_DIP), m_buttonCompare->GetSize().y}));
 
     auiMgr_.AddPane(m_panelTopButtons,
                     wxAuiPaneInfo().Name(L"TopPanel").Layer(2).Top().Row(1).Caption(_("Main Bar")).CaptionVisible(false).
@@ -1047,7 +1042,6 @@ imgFileManagerSmall_([]
     treegrid::init(*m_gridOverview);
     cfggrid ::init(*m_gridCfgHistory);
 
-
     //initialize and load configuration
     setGlobalCfgOnInit(globalCfg); //calls auiMgr_.Update()
     setConfig(guiCfg, cfgFilePaths); //expects auiMgr_.Update(): e.g. recalcMaxFolderPairsVisible()
@@ -1094,7 +1088,7 @@ imgFileManagerSmall_([]
     //register regular check for update on next idle event
     Bind(wxEVT_IDLE, &MainDialog::onStartupUpdateCheck, this);
 
-    //asynchronous call to wxWindow::Dimensions(): fix superfluous frame on right and bottom when FFS is started in fullscreen mode
+    //asynchronous call to wxWindow::Layout(): fix superfluous frame on right and bottom when FFS is started in fullscreen mode
     Bind(wxEVT_IDLE, &MainDialog::onLayoutWindowAsync, this);
     wxCommandEvent evtDummy;           //call once before onLayoutWindowAsync()
     onResizeLeftFolderWidth(evtDummy); //
@@ -1391,8 +1385,8 @@ GlobalConfig MainDialog::getGlobalCfgBeforeExit()
     //auiMgr_.Update(); //[!] not needed
     globalSettings.dpiLayouts[getDpiScalePercent()].panelLayout = auiMgr_.SavePerspective(); //does not need wxAuiManager::Update()!
 
-    const auto& [size, pos, isMaximized] = WindowLayout::getBeforeClose(*this); //call *after* wxAuiManager::SavePerspective()!
-    globalSettings.dpiLayouts[getDpiScalePercent()].mainDlg = {size, pos, isMaximized};
+    const WindowLayout::Rect& rect = WindowLayout::getBeforeClose(*this); //call *after* wxAuiManager::SavePerspective()!
+    globalSettings.dpiLayouts[getDpiScalePercent()].mainDlg = {rect.size, rect.pos, rect.isMaximized};
 
     return globalSettings;
 }
@@ -1513,7 +1507,7 @@ void MainDialog::copyGridSelectionToClipboard(const zen::Grid& grid)
     }
     catch (const std::bad_alloc& e)
     {
-        showNotificationDialog(this, DialogInfoType::error, PopupDialogCfg().setMainInstructions(_("Out of memory.") + L' ' + utfTo<std::wstring>(e.what())));
+        showNotificationDialog(this, DialogInfoType::error, PopupDialogCfg().setMainInstructions(_("Out of memory.") + L"\n\n" + utfTo<std::wstring>(e.what())));
     }
 }
 
@@ -1545,7 +1539,7 @@ void MainDialog::copyPathsToClipboard(const std::vector<FileSystemObject*>& sele
     }
     catch (const std::bad_alloc& e)
     {
-        showNotificationDialog(this, DialogInfoType::error, PopupDialogCfg().setMainInstructions(_("Out of memory.") + L' ' + utfTo<std::wstring>(e.what())));
+        showNotificationDialog(this, DialogInfoType::error, PopupDialogCfg().setMainInstructions(_("Out of memory.") + L"\n\n" + utfTo<std::wstring>(e.what())));
     }
 }
 
@@ -1907,6 +1901,18 @@ void MainDialog::openExternalApplication(const Zstring& commandLinePhrase, bool 
                                          const std::vector<FileSystemObject*>& selectionL,
                                          const std::vector<FileSystemObject*>& selectionR)
 {
+    //do not open more than one Explorer instance!
+    if (commandLinePhrase == extCommandFileManager.cmdLine)
+        if (selectionL.size() + selectionR.size() > 1)
+        {
+            if (( leftSide && !selectionL.empty()) ||
+                (!leftSide &&  selectionR.empty()))
+                return openExternalApplication(commandLinePhrase, leftSide, {selectionL[0]}, {});
+            else
+                return openExternalApplication(commandLinePhrase, leftSide, {}, {selectionR[0]});
+        }
+
+    //----------------------------------------------------------------
     if (std::exchange(operationInProgress_, true))
         return;
     ZEN_ON_SCOPE_EXIT(operationInProgress_ = false);
@@ -1916,15 +1922,6 @@ void MainDialog::openExternalApplication(const Zstring& commandLinePhrase, bool 
         //support fallback instead of an error in this special case
         if (commandLinePhrase == extCommandFileManager.cmdLine)
         {
-            if (selectionL.size() + selectionR.size() > 1) //do not open more than one Explorer instance!
-            {
-                if (( leftSide && !selectionL.empty()) ||
-                    (!leftSide &&  selectionR.empty()))
-                    return openExternalApplication(commandLinePhrase, leftSide, {selectionL[0]}, {});
-                else
-                    return openExternalApplication(commandLinePhrase, leftSide, {}, {selectionR[0]});
-            }
-
             //either left or right selection is filled with exactly one item (or no selection at all)
             AbstractPath itemPath = getNullPath();
             if (!selectionL.empty())
@@ -2028,22 +2025,10 @@ void MainDialog::openExternalApplication(const Zstring& commandLinePhrase, bool 
             Zstring cmdLineTmp = expandMacros(commandLinePhrase);
 
             //support path lists for a single command line: https://freefilesync.org/forum/viewtopic.php?t=10328#p39305
-            auto replacePathList = [&](const ZstringView macroName, const Zstring ItemPathInfo::*itemPath)
+            auto replaceListMacro = [&](const ZstringView macroName, const Zstring ItemPathInfo::*itemPath)
             {
-                const Zstring& macroNameQuoted = Zstring() + Zstr('"') + macroName + Zstr('"');
-                if (contains(cmdLineTmp, macroNameQuoted))
-                {
-                    Zstring pathList;
-                    for (const ItemPathInfo& pathInfo : pathInfos)
-                    {
-                        if (!pathList.empty())
-                            pathList += Zstr(' ');
-                        pathList += Zstr('"');
-                        pathList += pathInfo.*itemPath;
-                        pathList += Zstr('"');
-                    }
-                    replace(cmdLineTmp, macroNameQuoted, pathList);
-                }
+                replace(cmdLineTmp, Zstring() + Zstr('"') + macroName + Zstr('"'), macroName); //get rid of quotes if existing
+
                 if (contains(cmdLineTmp, macroName))
                 {
                     Zstring pathList;
@@ -2051,15 +2036,15 @@ void MainDialog::openExternalApplication(const Zstring& commandLinePhrase, bool 
                     {
                         if (!pathList.empty())
                             pathList += Zstr(' ');
-                        pathList += pathInfo.*itemPath;
+                        pathList += escapeCommandArg(pathInfo.*itemPath);
                     }
                     replace(cmdLineTmp, macroName, pathList);
                 }
             };
-            replacePathList(macroNameItemPaths,   &ItemPathInfo::itemPath);
-            replacePathList(macroNameLocalPaths,  &ItemPathInfo::localPath);
-            replacePathList(macroNameItemNames,   &ItemPathInfo::itemName);
-            replacePathList(macroNameParentPaths, &ItemPathInfo::parentPath);
+            replaceListMacro(macroNameItemPaths,   &ItemPathInfo::itemPath);
+            replaceListMacro(macroNameLocalPaths,  &ItemPathInfo::localPath);
+            replaceListMacro(macroNameItemNames,   &ItemPathInfo::itemName);
+            replaceListMacro(macroNameParentPaths, &ItemPathInfo::parentPath);
 
             //generate multiple command lines per each selected item
             for (const ItemPathInfo& pathInfo : pathInfos)
@@ -2068,17 +2053,24 @@ void MainDialog::openExternalApplication(const Zstring& commandLinePhrase, bool 
                     openWithDefaultApp(pathInfo.localPath); //throw FileError
                 else
                 {
-                    Zstring cmdLine = cmdLineTmp;
-                    replace(cmdLine, macroNameItemPath,    pathInfo.itemPath);
-                    replace(cmdLine, macroNameItemPath2,   pathInfo.itemPath2);
-                    replace(cmdLine, macroNameLocalPath,   pathInfo.localPath);
-                    replace(cmdLine, macroNameLocalPath2,  pathInfo.localPath2);
-                    replace(cmdLine, macroNameItemName,    pathInfo.itemName);
-                    replace(cmdLine, macroNameItemName2,   pathInfo.itemName2);
-                    replace(cmdLine, macroNameParentPath,  pathInfo.parentPath);
-                    replace(cmdLine, macroNameParentPath2, pathInfo.parentPath2);
+                    Zstring cmdLineItem = cmdLineTmp;
 
-                    cmdLines.push_back(std::move(cmdLine));
+                    auto replaceMacro = [&](const ZstringView macroName, const Zstring& value)
+                    {
+                        replace(cmdLineItem, Zstring() + Zstr('"') + macroName + Zstr('"'), macroName); //get rid of quotes if existing
+                        replace(cmdLineItem, macroName, escapeCommandArg(value));
+                    };
+
+                    replaceMacro(macroNameItemPath,    pathInfo.itemPath);
+                    replaceMacro(macroNameItemPath2,   pathInfo.itemPath2);
+                    replaceMacro(macroNameLocalPath,   pathInfo.localPath);
+                    replaceMacro(macroNameLocalPath2,  pathInfo.localPath2);
+                    replaceMacro(macroNameItemName,    pathInfo.itemName);
+                    replaceMacro(macroNameItemName2,   pathInfo.itemName2);
+                    replaceMacro(macroNameParentPath,  pathInfo.parentPath);
+                    replaceMacro(macroNameParentPath2, pathInfo.parentPath2);
+
+                    cmdLines.push_back(std::move(cmdLineItem));
                 }
 
             removeDuplicatesStable(cmdLines);
@@ -2371,7 +2363,7 @@ void MainDialog::onGridKeyEvent(wxKeyEvent& event, Grid& grid, bool leftSide)
     else
     {
         //0 ... 9
-        const size_t extAppPos = [&]() -> size_t
+        const size_t extAppPos = [&] -> size_t
         {
             if ('0' <= keyCode && keyCode <= '9')
                 return keyCode - '0';
@@ -2928,7 +2920,7 @@ void MainDialog::onGridContextRim(const std::vector<FileSystemObject*>& selectio
 
 void MainDialog::addFilterPhrase(const Zstring& phrase, bool include, bool requireNewLine)
 {
-    Zstring& filterString = [&]() -> Zstring&
+    Zstring& filterString = [&] -> Zstring&
     {
         if (include)
         {
@@ -3108,7 +3100,7 @@ void MainDialog::onOpenMenuTools(wxMenuEvent& event)
     //each layout menu item is either shown and owned by m_menuTools OR detached from m_menuTools and owned by detachedMenuItems_:
     auto filterLayoutItems = [&](wxMenuItem* menuItem, wxWindow* panelWindow)
     {
-        wxAuiPaneInfo& paneInfo = this->auiMgr_.GetPane(panelWindow);
+        wxAuiPaneInfo& paneInfo = auiMgr_.GetPane(panelWindow);
         if (paneInfo.IsShown())
         {
             if (!detachedMenuItems_.contains(menuItem))
@@ -3136,7 +3128,7 @@ void MainDialog::resetLayout()
     updateGuiForFolderPair();
 
     //progress dialog size:
-    globalCfg_.dpiLayouts[getDpiScalePercent()].progressDlg.size        = std::nullopt;
+    globalCfg_.dpiLayouts[getDpiScalePercent()].progressDlg.size        = wxSize();
     globalCfg_.dpiLayouts[getDpiScalePercent()].progressDlg.isMaximized = false;
 }
 
@@ -3344,7 +3336,7 @@ void MainDialog::updateUnsavedCfgStatus()
 
     if (m_bpButtonNew->IsEnabled() != allowNew || !m_bpButtonNew->GetBitmap().IsOk()) //support polling
     {
-        setImage(*m_bpButtonNew, allowNew ? loadImage("cfg_new") : makeBrightGrey(loadImage("cfg_new")));
+        setButtonLabel(*m_bpButtonNew, allowNew ? loadImage("cfg_new") : makeBrightGrey(loadImage("cfg_new")), dipToWxsize(3) /*pad*/);
         m_bpButtonNew->Enable(allowNew);
         m_menuItemNew->Enable(allowNew);
     }
@@ -3359,7 +3351,7 @@ void MainDialog::updateUnsavedCfgStatus()
 
     if (m_bpButtonSave->IsEnabled() != allowSave || !m_bpButtonSave->GetBitmap().IsOk()) //support polling
     {
-        setImage(*m_bpButtonSave, allowSave ? loadImage("cfg_save") : makeBrightGrey(loadImage("cfg_save")));
+        setButtonLabel(*m_bpButtonSave, allowSave ? loadImage("cfg_save") : makeBrightGrey(loadImage("cfg_save")), dipToWxsize(3) /*pad*/);
         m_bpButtonSave->Enable(allowSave);
         m_menuItemSave->Enable(allowSave); //bitmap is automatically greyscaled on Win7 (introducing a crappy looking shift), but not on XP
     }
@@ -3394,7 +3386,7 @@ void MainDialog::updateUnsavedCfgStatus()
         if (runningElevated()) //throw FileError
             title += L" (root)";
     }
-    catch (FileError&) { assert(false); }
+    catch ([[maybe_unused]] const FileError& e) { assert(false); }
 
     if (!showingConfigName)
         title += SPACED_DASH + _("Folder Comparison and Synchronization");
@@ -3945,7 +3937,7 @@ void MainDialog::onCfgGridContext(GridContextMenuEvent& event)
         {0xdd, 0xdd, 0xdd} /*light grey*/, dipToScreen(1)),
         !selectedRows.empty());
     };
-    const auto defaultColors = []() -> std::vector<std::pair<wxColor, wxString>>
+    const auto defaultColors = [] -> std::vector<std::pair<wxColor, wxString>>
     {
         if (wxSystemSettings::GetAppearance().IsDark()) //=> offer darker colors
             return {{wxNullColour /*=> !wxColor::IsOk()*/, L'(' + _("&Default") + L')'}, //meta options should be enclosed in parentheses
@@ -4049,7 +4041,7 @@ void MainDialog::onCfgGridContext(GridContextMenuEvent& event)
         if (!selectedRows.empty())
             if (const ConfigView::Details* cfg = cfggrid::getDataView(*m_gridCfgHistory).getItem(selectedRows[0]))
             {
-                const Zstring cmdLine = replaceCpy(expandMacros(extCommandFileManager.cmdLine), Zstr("%local_path%"), cfg->cfgItem.cfgFilePath);
+                const Zstring cmdLine = replaceCpy(expandMacros(extCommandFileManager.cmdLine), Zstr("%local_path%"), escapeCommandArg(cfg->cfgItem.cfgFilePath));
                 try
                 {
                     if (const auto& [exitCode, output] = consoleExecute(cmdLine, EXT_APP_MAX_TOTAL_WAIT_TIME_MS); //throw SysError, SysErrorTimeOut
@@ -4547,7 +4539,8 @@ void MainDialog::onViewFilterContext(wxEvent& event)
 void MainDialog::updateGlobalFilterButton()
 {
     //global filter: test for Null-filter
-    setImage(*m_bpButtonFilter, greyScaleIfDisabled(loadImage("options_filter"), !isNullFilter(currentCfg_.mainCfg.globalFilter)));
+    setButtonLabel(*m_bpButtonFilter, greyScaleIfDisabled(loadImage("options_filter"), !isNullFilter(currentCfg_.mainCfg.globalFilter)));
+    m_bpButtonFilter->SetMinSize(m_bpButtonFilter->GetMinSize() + wxSize(dipToWxsize(15), 0)); //make the filter button wider
 
     m_bpButtonFilter->SetToolTip(_("Filter") + L" (F7)" + getFilterSummaryForTooltip(currentCfg_.mainCfg.globalFilter));
     //m_bpButtonFilterContext->SetToolTip(m_bpButtonFilter->GetToolTipText());
@@ -4617,6 +4610,17 @@ void MainDialog::onCompare(wxCommandEvent& event)
                              dirLocks,
                              fpCfgList,
                              statusHandler); //throw CancelProcess
+
+        //play (optional) sound notification
+        if (!globalCfg_.soundFileCompareFinished.empty())
+        {
+            wxLogCollector soundLog; //wxWidgets shows modal error dialog by default => "no, wxWidgets, NO!"
+
+            wxSound::Play(utfTo<wxString>(globalCfg_.soundFileCompareFinished), wxSOUND_ASYNC);
+
+            if (!soundLog.GetMessages().empty())
+                statusHandler.logMessage(utfTo<std::wstring>(soundLog.GetMessages()), PhaseCallback::MsgType::info);
+        }
     }
     catch (CancelProcess&) {}
 
@@ -4633,16 +4637,6 @@ void MainDialog::onCompare(wxCommandEvent& event)
     filegrid::setData(*m_gridMainC,    folderCmp_); //
     treegrid::setData(*m_gridOverview, folderCmp_); //update view on data
     updateGui();                                    //
-
-    //play (optional) sound notification
-    if (!globalCfg_.soundFileCompareFinished.empty())
-    {
-        //wxWidgets shows modal error dialog by default => "no, wxWidgets, NO!"
-        wxLog* oldLogTarget = wxLog::SetActiveTarget(new wxLogStderr); //transfer and receive ownership!
-        ZEN_ON_SCOPE_EXIT(delete wxLog::SetActiveTarget(oldLogTarget));
-
-        wxSound::Play(utfTo<wxString>(globalCfg_.soundFileCompareFinished), wxSOUND_ASYNC);
-    }
 
     if (!IsActive())
         RequestUserAttention(); //this == toplevel win, so we also get the taskbar flash!
@@ -4840,7 +4834,7 @@ void MainDialog::onStartSync(wxCommandEvent& event)
 
     const std::chrono::system_clock::time_point syncStartTime = std::chrono::system_clock::now();
 
-    const WindowLayout::Dimensions progressDim
+    const WindowLayout::Rect progDlgRect
     {
         globalCfg_.dpiLayouts[getDpiScalePercent()].progressDlg.size,
         std::nullopt /*pos*/,
@@ -4856,7 +4850,7 @@ void MainDialog::onStartSync(wxCommandEvent& event)
                                               guiCfg.mainCfg.autoRetryDelay,
                                               globalCfg_.soundFileSyncFinished,
                                               globalCfg_.soundFileAlertPending,
-                                              progressDim,
+                                              progDlgRect,
                                               globalCfg_.progressDlgAutoClose);
     try
     {
@@ -5046,8 +5040,8 @@ void MainDialog::onStartSync(wxCommandEvent& event)
     const StatusHandlerFloatingDialog::DlgOptions dlgOpt = statusHandler.showResult();
 
     globalCfg_.progressDlgAutoClose = dlgOpt.autoCloseSelected;
-    globalCfg_.dpiLayouts[getDpiScalePercent()].progressDlg.size        = dlgOpt.dim.size; //=> ignore dim.pos
-    globalCfg_.dpiLayouts[getDpiScalePercent()].progressDlg.isMaximized = dlgOpt.dim.isMaximized;
+    globalCfg_.dpiLayouts[getDpiScalePercent()].progressDlg.size        = dlgOpt.dlgRect.size; //=> ignore dlgRect.pos
+    globalCfg_.dpiLayouts[getDpiScalePercent()].progressDlg.isMaximized = dlgOpt.dlgRect.isMaximized;
 
     updateGui(); //let's update *after* showResult(): some users are interested in seeing the old statistics dialog even after sync
 
@@ -5306,14 +5300,13 @@ void MainDialog::setLastOperationLog(const ProcessSummary& summary, const std::s
     logPanel_->setLog(errorLog);
 
     m_panelLog->Layout();
-    //m_panelItemStats->Dimensions(); //needed?
-    //m_panelTimeStats->Dimensions(); //
+    //m_panelItemStats->Layout(); //needed?
+    //m_panelTimeStats->Layout(); //
 
-    const wxImage& logBtnImg = layOver(loadImage("log_file"), logOverlayImage, wxALIGN_BOTTOM | wxALIGN_RIGHT);
-    m_bpButtonToggleLog->init(layOver(generatePressedButtonBack(logBtnImg.GetSize() + wxSize(dipToScreen(10), dipToScreen(10))), logBtnImg), logBtnImg);
+    const wxImage& logImg = layOver(loadImage("log_file"), logOverlayImage, wxALIGN_BOTTOM | wxALIGN_RIGHT);
+    const wxSize maxSize = getMaxSize(logImg.GetSize() + wxSize(dipToScreen(10), dipToScreen(10)), {0, m_bpButtonViewType->GetMinSize().y});
 
-    const int logBtnSize = m_bpButtonViewType->GetSize().GetHeight();
-    m_bpButtonToggleLog->SetMinSize({logBtnSize, logBtnSize});
+    m_bpButtonToggleLog->init(layOver(generatePressedButtonBack(maxSize), logImg), logImg, 0 /*pad*/);
 
     m_bpButtonToggleLog->Show(static_cast<bool>(errorLog));
 }
@@ -5543,8 +5536,10 @@ void MainDialog::updateGridViewData()
                 wxImage imgButtonPressed  = stackImages(imgCategory,     imgCountPressed,  ImageStackLayout::horizontal, ImageStackAlignment::bottom);
                 wxImage imgButtonReleased = stackImages(imgIconReleased, imgCountReleased, ImageStackLayout::horizontal, ImageStackAlignment::bottom);
 
-                btn.init(mirrorIfRtl(layOver(generatePressedButtonBack(imgButtonPressed.GetSize()), imgButtonPressed)),
-                         mirrorIfRtl(imgButtonReleased));
+                const wxSize maxSize = getMaxSize(imgButtonPressed.GetSize(), {0, m_bpButtonViewType->GetMinSize().y});
+
+                btn.init(mirrorIfRtl(layOver(generatePressedButtonBack(maxSize), imgButtonPressed)),
+                         mirrorIfRtl(imgButtonReleased), 0 /*pad*/);
             }
         }
 
@@ -5643,7 +5638,7 @@ void MainDialog::updateGridViewData()
     m_bpButtonViewType         ->Show(anyViewButtonShown);
     m_bpButtonViewFilterContext->Show(anyViewButtonShown);
 
-    //m_panelViewFilter->Dimensions(); -> yes, needed, but will also be called in updateStatistics();
+    //m_panelViewFilter->Layout(); -> yes, needed, but will also be called in updateStatistics();
 
     //all three grids retrieve their data directly via gridDataView
     filegrid::refresh(*m_gridMainL, *m_gridMainC, *m_gridMainR);
@@ -5962,7 +5957,7 @@ void MainDialog::onAddFolderPairKeyEvent(wxKeyEvent& event)
 {
     const int keyCode = event.GetKeyCode();
 
-    auto getAddFolderPairPos = [&]() -> ptrdiff_t //find folder pair originating the event
+    auto getAddFolderPairPos = [&] -> ptrdiff_t //find folder pair originating the event
     {
         if (auto eventObj = dynamic_cast<const wxWindow*>(event.GetEventObject()))
             for (auto it = additionalFolderPairs_.begin(); it != additionalFolderPairs_.end(); ++it)
@@ -6017,7 +6012,7 @@ void MainDialog::updateGuiForFolderPair()
     m_bpButtonLocalCompCfg->Show(showLocalCfgFirstPair);
     m_bpButtonLocalSyncCfg->Show(showLocalCfgFirstPair);
     m_bpButtonLocalFilter ->Show(showLocalCfgFirstPair);
-    setImage(*m_bpButtonSwapSides, loadImage(showLocalCfgFirstPair ? "swap_slim" : "swap"));
+    setButtonLabel(*m_bpButtonSwapSides, loadImage(showLocalCfgFirstPair ? "swap_slim" : "swap"), dipToWxsize(3));
 
     //update sub-panel sizes for calculations below!!!
     m_panelTopCenter->GetSizer()->SetSizeHints(m_panelTopCenter); //~=Fit() + SetMinSize()
@@ -6036,7 +6031,7 @@ void MainDialog::updateGuiForFolderPair()
 
     //make sure user cannot fully shrink additional folder pairs
     dirPane.MinSize(dipToWxsize(100), firstPairHeight + addPairCountMin * addPairHeight);
-    dirPane.BestSize(-1,            firstPairHeight + addPairCountOpt * addPairHeight);
+    dirPane.BestSize(-1,              firstPairHeight + addPairCountOpt * addPairHeight);
 
     //########################################################################################################################
     //wxAUI hack: call wxAuiPaneInfo::Fixed() to apply best size:
@@ -6087,7 +6082,7 @@ void MainDialog::insertAddFolderPair(const std::vector<LocalPairConfig>& newPair
         if (!folderPairScrapyard_.empty()) //construct cheaply from "spare parts"
         {
             newPair = folderPairScrapyard_.back().release(); //transfer ownership
-            folderPairScrapyard_.pop_back();
+            folderPairScrapyard_.pop_back();                 //
             newPair->Show();
         }
         else
@@ -6102,9 +6097,12 @@ void MainDialog::insertAddFolderPair(const std::vector<LocalPairConfig>& newPair
             newPair->m_folderPathRight->setHistory(folderHistoryRight_);
 
             const wxSize optionsIconSize = loadImage("item_add").GetSize();
-            setImage(*(newPair->m_bpButtonFolderPairOptions), resizeCanvas(mirrorIfRtl(loadImage("button_arrow_right")), optionsIconSize, wxALIGN_CENTER));
+            setButtonLabel(*(newPair->m_bpButtonFolderPairOptions), resizeCanvas(mirrorIfRtl(loadImage("button_arrow_right")), optionsIconSize, wxALIGN_CENTER), 0 /*pad*/);
 
-            //set width of left folder panel
+            //important: make sure panel has proper default height!
+            newPair->GetSizer()->SetSizeHints(newPair); //~=Fit() +SetMinSize()
+
+            //set width of left folder panel: *after* SetSizeHints()! see MainDialog::onResizeLeftFolderWidth()
             const int width = m_panelTopLeft->GetSize().GetWidth();
             newPair->m_panelLeft->SetMinSize({width, -1});
 
@@ -6118,9 +6116,6 @@ void MainDialog::insertAddFolderPair(const std::vector<LocalPairConfig>& newPair
             newPair->m_bpButtonLocalCompCfg->Bind(wxEVT_COMMAND_BUTTON_CLICKED, [this](wxCommandEvent& event) { onLocalCompCfg  (event); });
             newPair->m_bpButtonLocalSyncCfg->Bind(wxEVT_COMMAND_BUTTON_CLICKED, [this](wxCommandEvent& event) { onLocalSyncCfg  (event); });
             newPair->m_bpButtonLocalFilter ->Bind(wxEVT_COMMAND_BUTTON_CLICKED, [this](wxCommandEvent& event) { onLocalFilterCfg(event); });
-
-            //important: make sure panel has proper default height!
-            newPair->GetSizer()->SetSizeHints(newPair); //~=Fit() + SetMinSize()
         }
 
         bSizerAddFolderPairs->Insert(pos + i, newPair, 0, wxEXPAND);
@@ -6316,12 +6311,11 @@ void MainDialog::onMenuExportFileList(wxCommandEvent& event)
         }
         if (!colAttrRight.empty())
         {
-            std::for_each(colAttrRight.begin(), colAttrRight.end() - 1,
-                          [&](const Grid::ColAttributes& ca)
+            for (const Grid::ColAttributes& ca : std::span(colAttrRight.begin(), colAttrRight.end() - 1))
             {
                 header += fmtValue(provRight->getColumnLabel(ca.type));
                 header += CSV_SEP;
-            });
+            }
             header += fmtValue(provRight->getColumnLabel(colAttrRight.back().type));
         }
         header += LINE_BREAK;
@@ -6333,8 +6327,8 @@ void MainDialog::onMenuExportFileList(wxCommandEvent& event)
                 !jobNames.empty())
             {
                 title = utfTo<Zstring>(jobNames[0]);
-                std::for_each(jobNames.begin() + 1, jobNames.end(), [&](const std::wstring& jobName)
-                { title += Zstr(" + ") + utfTo<Zstring>(jobName); });
+                for (const std::wstring& jobName : std::span(jobNames.begin() + 1, jobNames.end()))
+                    title += Zstr(" + ") + utfTo<Zstring>(jobName);
             }
 
             const Zstring shortGuid = printNumber<Zstring>(Zstr("%04x"), static_cast<unsigned int>(getCrc16(generateGUID())));

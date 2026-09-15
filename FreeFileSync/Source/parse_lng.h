@@ -3,15 +3,12 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef PARSE_LNG_H_46794693622675638
-#define PARSE_LNG_H_46794693622675638
+#pragma once
 
 #include <unordered_map>
 #include <unordered_set>
 #include <zen/utf.h>
 #include "parse_plural.h"
-
 
 namespace lng
 {
@@ -66,20 +63,21 @@ std::string generateLng(const TranslationUnorderedList& in, const TransHeader& h
 //--------------------------- implementation ---------------------------
 }
 
-template<> struct std::hash<lng::SingularPluralPair>
+template<>
+struct std::hash<lng::SingularPluralPair>
 {
     size_t operator()(const lng::SingularPluralPair& str) const
     {
         zen::FNV1aHash<size_t> hash2; //shut up "GCC: shadow declaration"
-        for (const char c : str.first ) hash2.add(c);
-        for (const char c : str.second) hash2.add(c);
+        hashAddBinaryString(hash2, str.first);
+        hashAddBinaryString(hash2, str.second);
         return hash2.get();
     }
 };
 
 namespace lng
 {
-class TranslationUnorderedList //unordered list of unique translation items
+class TranslationUnorderedList
 {
 public:
     TranslationUnorderedList(TranslationMap&& transOld, TranslationPluralMap&& transPluralOld) :
@@ -168,8 +166,6 @@ struct Token
 class KnownTokens
 {
 public:
-    KnownTokens() {} //clang wants it, clang gets it
-
     using TokenMap = std::unordered_map<TokenType, std::string>;
 
     const TokenMap& getList() const { return tokens_; }
@@ -201,7 +197,7 @@ public:
     explicit Scanner(const std::string& byteStream) : stream_(byteStream), pos_(stream_.begin())
     {
         if (zen::startsWith(stream_, zen::BYTE_ORDER_MARK_UTF8))
-            pos_ += zen::strLength(zen::BYTE_ORDER_MARK_UTF8);
+            pos_ += zen::strSize(zen::BYTE_ORDER_MARK_UTF8);
     }
 
     Token getNextToken()
@@ -266,7 +262,7 @@ private:
 
     bool startsWith(const std::string& prefix) const
     {
-        return zen::startsWith(zen::makeStringView(pos_, stream_.end()), prefix);
+        return zen::startsWith(std::string_view(pos_, stream_.end()), prefix);
     }
 
     static void normalize(std::string& text)
@@ -738,5 +734,3 @@ std::string generateLng(const TranslationUnorderedList& in, const TransHeader& h
     return replaceCpy(output, '\n', "\r\n"); //back to Windows line endings
 }
 }
-
-#endif //PARSE_LNG_H_46794693622675638

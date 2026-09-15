@@ -3,13 +3,10 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef PROCESS_PRIORITY_H_83421759082143245
-#define PROCESS_PRIORITY_H_83421759082143245
+#pragma once
 
 #include <memory>
 #include "file_error.h"
-
 
 namespace zen
 {
@@ -32,5 +29,3 @@ private:
     const std::unique_ptr<Impl> pimpl_;
 };
 }
-
-#endif //PROCESS_PRIORITY_H_83421759082143245

@@ -10,11 +10,10 @@
 #include <wx/wupdlock.h>
 #include <wx/valtext.h>
 #include <wx+/rtl.h>
-#include <wx+/no_flicker.h>
 #include <wx+/context_menu.h>
 #include <wx+/choice_enum.h>
 #include <wx+/image_tools.h>
-#include <wx+/window_layout.h>
+#include <wx+/window_tools.h>
 #include <wx+/popup_dlg.h>
 #include <wx+/image_resources.h>
 #include "gui_generated.h"
@@ -44,14 +43,14 @@ void initBitmapRadioButtons(const std::vector<std::pair<ToggleButton*, std::stri
     auto generateSelectImage = [physicalLeft](wxButton& btn, const std::string& imgName, bool selected)
     {
         wxImage imgTxt = createImageFromText(btn.GetLabelText(), btn.GetFont(),
-                                             selected ? *wxBLACK : //accessibility: always set both foreground AND background colors! see renderSelectedButton()
+                                             selected ? *wxBLACK : //accessibility: always set both foreground AND background colors! see getColorToggleButtonFill()
                                              btn.GetForegroundColour());
 
         wxImage imgIco = mirrorIfRtl(loadImage(imgName, -1 /*maxWidth*/, dipToScreen(getMenuIconDipSize())));
 
         if (imgName == "delete_recycler") //use system icon if available (can fail on Linux??)
             try { imgIco = extractWxImage(fff::getTrashIcon(dipToScreen(getMenuIconDipSize()))); /*throw SysError*/ }
-            catch (SysError&) { assert(false); }
+            catch ([[maybe_unused]] const SysError& e) { assert(false); }
 
         if (!selected)
             imgIco = greyScale(imgIco);
@@ -60,30 +59,22 @@ void initBitmapRadioButtons(const std::vector<std::pair<ToggleButton*, std::stri
                            stackImages(imgIco, imgTxt, ImageStackLayout::horizontal, ImageStackAlignment::center, dipToScreen(5)) :
                            stackImages(imgTxt, imgIco, ImageStackLayout::horizontal, ImageStackAlignment::center, dipToScreen(5));
 
-        return resizeCanvas(imgStack, imgStack.GetSize() + wxSize(dipToScreen(14), dipToScreen(12)), wxALIGN_CENTER);
+        return resizeCanvas(imgStack, imgStack.GetSize() + wxSize(dipToScreen(7 + 7), dipToScreen(6 + 6)), wxALIGN_CENTER);
     };
 
-    wxSize maxExtent;
+    wxSize maxSize;
     std::unordered_map<const ToggleButton*, wxImage> labelsNotSel;
     for (auto& [btn, imgName] : buttons)
     {
         wxImage img = generateSelectImage(*btn, imgName, false /*selected*/);
-        maxExtent.x = std::max(maxExtent.x, img.GetWidth());
-        maxExtent.y = std::max(maxExtent.y, img.GetHeight());
-
+        maxSize = getMaxSize(maxSize, img.GetSize());
         labelsNotSel[btn] = std::move(img);
     }
 
     for (auto& [btn, imgName] : buttons)
-    {
-        btn->init(layOver(rectangleImage(maxExtent, getColorToggleButtonFill(), getColorToggleButtonBorder(), dipToScreen(1)),
+        btn->init(layOver(rectangleImage(maxSize, getColorToggleButtonFill(), getColorToggleButtonBorder(), dipToScreen(1)),
                           generateSelectImage(*btn, imgName, true /*selected*/), wxALIGN_CENTER_VERTICAL | (physicalLeft ? wxALIGN_LEFT : wxALIGN_RIGHT)),
-                  resizeCanvas(labelsNotSel[btn], maxExtent,                     wxALIGN_CENTER_VERTICAL | (physicalLeft ? wxALIGN_LEFT : wxALIGN_RIGHT)));
-
-        btn->SetMinSize({screenToWxsize(maxExtent.x),
-                         screenToWxsize(maxExtent.y)}); //get rid of selection border on Windows + macOS :)
-        //SetMinSize() instead of SetSize() is needed here for wxWindows layout determination to work correctly
-    }
+                  resizeCanvas(labelsNotSel[btn], maxSize,                       wxALIGN_CENTER_VERTICAL | (physicalLeft ? wxALIGN_LEFT : wxALIGN_RIGHT)), 0 /*pad*/);
 }
 
 
@@ -522,7 +513,7 @@ globalLogFolderPhrase_(globalLogFolderPhrase)
     setStandardButtonLayout(*bSizerStdButtons, StdButtons().setAffirmative(m_buttonOK).setCancel(m_buttonCancel));
 
 
-    setBitmapTextLabel(*m_buttonAddNotes, loadImage("notes", dipToScreen(16)), m_buttonAddNotes->GetLabelText());
+    setButtonLabel(*m_buttonAddNotes, loadImage("notes", dipToScreen(16)), m_buttonAddNotes->GetLabelText());
 
     setImage(*m_bitmapNotes, loadImage("notes", dipToScreen(20)));
 
@@ -546,8 +537,8 @@ globalLogFolderPhrase_(globalLogFolderPhrase)
 
     auto addToImageList = [&](const wxImage& img)
     {
-        imgList->Add(toScaledBitmap(img));
-        imgList->Add(toScaledBitmap(greyScale(img)));
+        imgList->Add(toDpiScaledBitmap(img));
+        imgList->Add(toDpiScaledBitmap(greyScale(img)));
     };
     //add images in same sequence like ConfigTypeImage enum!!!
     addToImageList(loadImage("options_compare", wxsizeToScreen(imgListSize)));
@@ -588,8 +579,8 @@ globalLogFolderPhrase_(globalLogFolderPhrase)
     const int scrollDelta = GetCharHeight();
     m_scrolledWindowPerf->SetScrollRate(scrollDelta, scrollDelta);
 
-    setDefaultWidth(*m_spinCtrlAutoRetryCount);
-    setDefaultWidth(*m_spinCtrlAutoRetryDelay);
+    fixSpinCtrl(*m_spinCtrlAutoRetryCount);
+    fixSpinCtrl(*m_spinCtrlAutoRetryDelay);
 
     //ignore invalid input for time shift control:
     wxTextValidator inputValidator(wxFILTER_DIGITS | wxFILTER_INCLUDE_CHAR_LIST);
@@ -601,11 +592,11 @@ globalLogFolderPhrase_(globalLogFolderPhrase)
 
     assert(!contains(m_buttonClear->GetLabel(), L"&C") && !contains(m_buttonClear->GetLabel(), L"&c")); //gazillionth wxWidgets bug on OS X: Command + C mistakenly hits "&C" access key!
 
-    setDefaultWidth(*m_spinCtrlMinSize);
-    setDefaultWidth(*m_spinCtrlMaxSize);
-    setDefaultWidth(*m_spinCtrlTimespan);
+    fixSpinCtrl(*m_spinCtrlMinSize);
+    fixSpinCtrl(*m_spinCtrlMaxSize);
+    fixSpinCtrl(*m_spinCtrlTimespan);
 
-    setImage(*m_bpButtonDefaultContext, mirrorIfRtl(loadImage("button_arrow_right")));
+    setButtonLabel(*m_bpButtonDefaultContext, mirrorIfRtl(loadImage("button_arrow_right")), 0 /*pad*/);
 
     //------------- synchronization panel -----------------
     m_buttonTwoWay->SetToolTip(getSyncVariantDescription(SyncVariant::twoWay));
@@ -646,9 +637,9 @@ globalLogFolderPhrase_(globalLogFolderPhrase)
         {m_buttonVersioning, "delete_versioning" },
     }, true /*alignLeft*/);
 
-    setDefaultWidth(*m_spinCtrlVersionMaxDays );
-    setDefaultWidth(*m_spinCtrlVersionCountMin);
-    setDefaultWidth(*m_spinCtrlVersionCountMax);
+    fixSpinCtrl(*m_spinCtrlVersionMaxDays );
+    fixSpinCtrl(*m_spinCtrlVersionCountMin);
+    fixSpinCtrl(*m_spinCtrlVersionCountMax);
 
     m_versioningFolderPath->setHistory(std::make_shared<HistoryList>(versioningFolderHistory, folderHistoryMax));
 
@@ -656,9 +647,9 @@ globalLogFolderPhrase_(globalLogFolderPhrase)
     const wxImage imgFileManagerSmall_([]
     {
         try { return extractWxImage(fff::getFileManagerIcon(dipToScreen(20))); /*throw SysError*/ }
-        catch (SysError&) { assert(false); return loadImage("file_manager", dipToScreen(20)); }
+        catch ([[maybe_unused]] const SysError& e) { assert(false); return loadImage("file_manager", dipToScreen(20)); }
     }());
-    setImage(*m_bpButtonShowLogFolder, imgFileManagerSmall_);
+    setButtonLabel(*m_bpButtonShowLogFolder, imgFileManagerSmall_);
     m_bpButtonShowLogFolder->SetToolTip(translate(extCommandFileManager.description));//translate default external apps on the fly: "Show in Explorer"
 
     m_logFolderPath->SetHint(utfTo<wxString>(globalLogFolderPhrase_));
@@ -722,7 +713,7 @@ globalLogFolderPhrase_(globalLogFolderPhrase)
     Show(); //GTK3 size calculation requires visible window: https://github.com/wxWidgets/wxWidgets/issues/16088
     //Hide(); -> avoids old position flash before Center() on GNOME but causes hang on KDE? https://freefilesync.org/forum/viewtopic.php?t=10103#p42404
 #endif
-    Center(); //needs to be re-applied after a dialog size change!
+    Center(); //apply *after* dialog size change!
 
     //keep stable sizer height: change-based directions are taller than difference-based ones => init with SyncVariant::twoWay
     bSizerSyncDirHolder   ->SetMinSize(-1, bSizerSyncDirsChanges ->GetSize().y);
@@ -1154,8 +1145,8 @@ auto updateDirButton(wxBitmapButton& button, SyncDirection dir,
             break;
     }
     wxImage img = mirrorIfRtl(loadImage(imgName));
-    button.SetBitmapLabel   (toScaledBitmap(          img));
-    button.SetBitmapDisabled(toScaledBitmap(greyScale(img))); //fix wxWidgets' all-too-clever multi-state!
+    button.SetBitmapLabel   (toDpiScaledBitmap(          img));
+    button.SetBitmapDisabled(toDpiScaledBitmap(greyScale(img))); //fix wxWidgets' all-too-clever multi-state!
     //=> the disabled bitmap is generated during first SetBitmapLabel() call but never updated again by wxWidgets!
 }
 
@@ -1168,7 +1159,7 @@ void updateDiffDirButtons(const DirectionByDiff& diffDirs,
                           wxBitmapButton& buttonDifferent)
 {
     updateDirButton(buttonLeftOnly,   diffDirs.leftOnly,   "so_delete_left", "so_none", "so_create_right", SO_DELETE_LEFT,     SO_DO_NOTHING, SO_CREATE_RIGHT);
-    updateDirButton(buttonRightOnly,  diffDirs.rightOnly,  "so_create_left", "so_none", "so_delete_right", SO_CREATE_LEFT, SO_DO_NOTHING, SO_DELETE_RIGHT);
+    updateDirButton(buttonRightOnly,  diffDirs.rightOnly,  "so_create_left", "so_none", "so_delete_right", SO_CREATE_LEFT,     SO_DO_NOTHING, SO_DELETE_RIGHT);
     updateDirButton(buttonLeftNewer,  diffDirs.leftNewer,  "so_update_left", "so_none", "so_update_right", SO_OVERWRITE_LEFT,  SO_DO_NOTHING, SO_OVERWRITE_RIGHT);
     updateDirButton(buttonRightNewer, diffDirs.rightNewer, "so_update_left", "so_none", "so_update_right", SO_OVERWRITE_LEFT,  SO_DO_NOTHING, SO_OVERWRITE_RIGHT);
     //simulate category "different" as leftNewer/rightNewer combined:
@@ -1186,9 +1177,9 @@ void updateChangeDirButtons(const DirectionByChange& changeDirs,
 {
     updateDirButton(buttonLeftCreate, changeDirs.left.create,  "so_delete_left", "so_none", "so_create_right", SO_DELETE_LEFT,     SO_DO_NOTHING, SO_CREATE_RIGHT);
     updateDirButton(buttonLeftUpdate, changeDirs.left.update,  "so_update_left", "so_none", "so_update_right", SO_OVERWRITE_LEFT,  SO_DO_NOTHING, SO_OVERWRITE_RIGHT);
-    updateDirButton(buttonLeftDelete, changeDirs.left.delete_, "so_create_left", "so_none", "so_delete_right", SO_CREATE_LEFT, SO_DO_NOTHING, SO_DELETE_RIGHT);
+    updateDirButton(buttonLeftDelete, changeDirs.left.delete_, "so_create_left", "so_none", "so_delete_right", SO_CREATE_LEFT,     SO_DO_NOTHING, SO_DELETE_RIGHT);
 
-    updateDirButton(buttonRightCreate, changeDirs.right.create,  "so_create_left", "so_none", "so_delete_right", SO_CREATE_LEFT, SO_DO_NOTHING, SO_DELETE_RIGHT);
+    updateDirButton(buttonRightCreate, changeDirs.right.create,  "so_create_left", "so_none", "so_delete_right", SO_CREATE_LEFT,     SO_DO_NOTHING, SO_DELETE_RIGHT);
     updateDirButton(buttonRightUpdate, changeDirs.right.update,  "so_update_left", "so_none", "so_update_right", SO_OVERWRITE_LEFT,  SO_DO_NOTHING, SO_OVERWRITE_RIGHT);
     updateDirButton(buttonRightDelete, changeDirs.right.delete_, "so_delete_left", "so_none", "so_create_right", SO_DELETE_LEFT,     SO_DO_NOTHING, SO_CREATE_RIGHT);
 }
@@ -1352,7 +1343,7 @@ void ConfigDialog::updateSyncGui()
             wxImage imgTrash = loadImage("delete_recycler");
             //use system icon if available (can fail on Linux??)
             try { imgTrash = extractWxImage(fff::getTrashIcon(imgTrash.GetHeight())); /*throw SysError*/ }
-            catch (SysError&) { assert(false); }
+            catch ([[maybe_unused]] const SysError& e) { assert(false); }
 
             setImage(*m_bitmapDeletionType, greyScaleIfDisabled(imgTrash, syncOptionsEnabled));
             setText(*m_staticTextDeletionTypeDescription, _("Retain deleted and overwritten files in the recycle bin"));
@@ -1485,7 +1476,7 @@ void ConfigDialog::setMiscSyncOptions(const MiscSyncConfig& miscCfg)
         for (int i = 0; i < rowsToCreate; ++i)
         {
             wxSpinCtrl* spinCtrlParallelOps = new wxSpinCtrl(m_scrolledWindowPerf, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 2000'000'000, 1);
-            setDefaultWidth(*spinCtrlParallelOps);
+            fixSpinCtrl(*spinCtrlParallelOps);
             spinCtrlParallelOps->Enable(enableExtraFeatures_);
             fgSizerPerf->Add(spinCtrlParallelOps, 0, wxALIGN_CENTER_VERTICAL);
 
@@ -1585,8 +1576,8 @@ void ConfigDialog::updateMiscGui()
                     label = resizeCanvas(label, {label.GetWidth() + successIcon.GetWidth(), label.GetHeight()}, wxALIGN_LEFT);
 
                 button.SetToolTip(tooltip);
-                button.SetBitmapLabel   (toScaledBitmap(notifyCondition == emailNotifyCondition_ && sendEmailEnabled ? label : greyScale(label)));
-                button.SetBitmapDisabled(toScaledBitmap(greyScale(label))); //fix wxWidgets' all-too-clever multi-state!
+                button.SetBitmapLabel   (toDpiScaledBitmap(notifyCondition == emailNotifyCondition_ && sendEmailEnabled ? label : greyScale(label)));
+                button.SetBitmapDisabled(toDpiScaledBitmap(greyScale(label))); //fix wxWidgets' all-too-clever multi-state!
                 //=> the disabled bitmap is generated during first SetBitmapLabel() call but never updated again by wxWidgets!
             }
         };

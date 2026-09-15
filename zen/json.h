@@ -1,19 +1,53 @@
-﻿// *****************************************************************************
+// *****************************************************************************
 // * This file is part of the FreeFileSync project. It is distributed under    *
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
+#pragma once
 
-#ifndef JSON_H_0187348321748321758934215734
-#define JSON_H_0187348321748321758934215734
-
+#include <list>
 #include <zen/string_tools.h>
-
 
 namespace zen
 {
 //Spec: https://tools.ietf.org/html/rfc8259
 //Test: http://seriot.ch/parsing_json.php
+struct JsonValue;
+
+class JsonObject
+{
+public:
+    using Item = std::list<std::pair<std::string /*¹*/, JsonValue>>; //must NOT invalidate references used by "valuesByName_"!
+    //¹) careful: should be const, but fails to compile in debug => do not allow write access by the API:
+
+    Range<Item::const_iterator> getItems() const { return {values_.begin(), values_.end()}; }
+
+    bool empty() const { return values_.empty(); }
+
+    const JsonValue* get(const std::string_view name) const;
+
+    template <class T>
+    void set(std::string&& name, T&& value);
+
+    //-------------------------------------------------------------
+    JsonObject() = default;
+
+    JsonObject(const JsonObject& other);
+
+    JsonObject& operator=(const JsonObject& other) { JsonObject(other).swap(*this); return *this; }
+
+    JsonObject           (JsonObject&& tmp) noexcept { swap(tmp); }
+    JsonObject& operator=(JsonObject&& tmp) noexcept { swap(tmp); return *this; }
+
+private:
+    void swap(JsonObject& other) noexcept;
+
+    //"[...] most implementations of JSON libraries do not accept duplicate keys [...]" => fine!
+    Item                                                 values_;       //in order of insertion
+    std::unordered_map<std::string_view, Item::iterator> valuesByName_; //alternate view for lookup
+};
+
+
 struct JsonValue
 {
     enum class Type
@@ -40,10 +74,9 @@ struct JsonValue
 
 
     Type type = Type::null;
-    std::string                      primVal; //for primitive types
-    std::vector<JsonValue>           arrayVal;
-    std::map<std::string, JsonValue> objectVal; //"[...] most implementations of JSON libraries do not accept duplicate keys [...]" => fine!
-    //alternative: std::unordered_map => but let's keep std::map, so that objectVal is sorted for our unit tests
+    std::string             primVal; //for primitive types
+    std::vector<JsonValue>  arrayVal;
+    JsonObject              objectVal;
 };
 
 
@@ -62,18 +95,13 @@ JsonValue parseJson(const std::string& stream); //throw JsonParsingError
 
 
 
+//---------------------- implementation ----------------------
+
 //helper functions for JsonValue access:
 inline
 const JsonValue* getChildFromJsonObject(const JsonValue& jvalue, const std::string& name)
 {
-    if (jvalue.type != JsonValue::Type::object)
-        return nullptr;
-
-    auto it = jvalue.objectVal.find(name);
-    if (it == jvalue.objectVal.end())
-        return nullptr;
-
-    return &it->second;
+    return jvalue.type != JsonValue::Type::object ? nullptr : jvalue.objectVal.get(name);
 }
 
 
@@ -88,10 +116,44 @@ std::optional<std::string> getPrimitiveFromJsonObject(const JsonValue& jvalue, c
 }
 
 
+inline
+JsonObject::JsonObject(const JsonObject& other) : values_(other.values_)
+{
+    for (auto it = values_.begin(); it != values_.end(); ++it)
+        valuesByName_.emplace(it->first, it);
+}
 
 
+inline
+void JsonObject::swap(JsonObject& other) noexcept
+{
+    values_      .swap(other.values_);       //
+    valuesByName_.swap(other.valuesByName_); //swap does *not* invalidate values_-iterators!
+}
 
-//---------------------- implementation ----------------------
+
+inline
+const JsonValue* JsonObject::get(const std::string_view name) const
+{
+    auto it = valuesByName_.find(name);
+    return it == valuesByName_.end() ? nullptr : &(it->second->second);
+}
+
+
+template <class T> inline
+void JsonObject::set(std::string&& name, T&& value)
+{
+    auto it = valuesByName_.find(name);
+    if (it != valuesByName_.end())
+        it->second->second = JsonValue(std::forward<T>(value));
+    else
+    {
+        values_.emplace_back(std::move(name), std::forward<T>(value));
+        valuesByName_.emplace(values_.back().first, --values_.end());
+    }
+}
+
+
 namespace json_impl
 {
 namespace
@@ -130,13 +192,13 @@ namespace
 [[nodiscard]] std::string jsonUnescape(const std::string& str)
 {
     std::string output;
-    std::basic_string<impl::Char16> utf16Buf;
+    std::vector<impl::Char16> utf16Buf;
 
     auto flushUtf16 = [&]
     {
         if (!utf16Buf.empty())
         {
-            UtfDecoder<impl::Char16> decoder(utf16Buf.c_str(), utf16Buf.size());
+            UtfDecoder<impl::Char16> decoder(utf16Buf.data(), utf16Buf.size());
             while (std::optional<impl::CodePoint> cp = decoder.getNext())
                 codePointToUtf<char>(*cp, [&](const char c) { output += c; });
             utf16Buf.clear();
@@ -179,8 +241,8 @@ namespace
                         isHexDigit(it[3])   &&
                         isHexDigit(it[4]))
                     {
-                        utf16Buf += static_cast<impl::Char16>(static_cast<unsigned char>(unhexify(it[1], it[2])) * 256 +
-                                                              static_cast<unsigned char>(unhexify(it[3], it[4])));
+                        utf16Buf.push_back(static_cast<impl::Char16>(static_cast<unsigned char>(unhexify(it[1], it[2])) * 256 +
+                                                                     static_cast<unsigned char>(unhexify(it[3], it[4]))));
                         it += 4;
                     }
                     else //unknown escape sequence!
@@ -230,11 +292,11 @@ void serialize(const JsonValue& jval, std::string& stream,
             stream += '{';
             if (!jval.objectVal.empty())
             {
-                for (auto it = jval.objectVal.begin(); it != jval.objectVal.end(); ++it)
-                {
-                    const auto& [childName, childValue] = *it;
+                bool first = true;
 
-                    if (it != jval.objectVal.begin())
+                for (const auto& [childName, childValue] : jval.objectVal.getItems())
+                {
+                    if (!std::exchange(first, false))
                         stream += ',';
 
                     stream += lineBreak;
@@ -420,7 +482,7 @@ private:
 
     bool startsWith(const std::string& prefix) const
     {
-        return zen::startsWith(makeStringView(pos_, stream_.end()), prefix);
+        return zen::startsWith(std::string_view(pos_, stream_.end()), prefix);
     }
 
     const std::string stream_;
@@ -464,7 +526,7 @@ private:
                     consumeToken(TokenType::colon); //throw JsonParsingError
 
                     JsonValue value = parseValue(); //throw JsonParsingError
-                    jval.objectVal.emplace(std::move(name), std::move(value));
+                    jval.objectVal.set(std::move(name), std::move(value));
 
                     if (token().type != TokenType::comma)
                         break;
@@ -550,5 +612,3 @@ JsonValue parseJson(const std::string& stream) //throw JsonParsingError
     return json_impl::JsonParser(stream).parse(); //throw JsonParsingError
 }
 }
-
-#endif //JSON_H_0187348321748321758934215734

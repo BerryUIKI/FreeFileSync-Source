@@ -3,12 +3,9 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef CMP_FILETIME_H_032180451675845
-#define CMP_FILETIME_H_032180451675845
+#pragma once
 
 #include <ctime>
-
 
 namespace fff
 {
@@ -89,5 +86,3 @@ TimeResult compareFileTime(time_t lhs, time_t rhs, unsigned int tolerance, const
         return TimeResult::leftNewer;
 }
 }
-
-#endif //CMP_FILETIME_H_032180451675845

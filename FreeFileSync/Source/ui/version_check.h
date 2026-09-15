@@ -3,13 +3,10 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef VERSION_CHECK_H_324872374893274983275
-#define VERSION_CHECK_H_324872374893274983275
+#pragma once
 
 #include <wx/window.h>
 #include <zen/stl_tools.h>
-
 
 namespace fff
 {
@@ -31,5 +28,3 @@ void automaticUpdateCheckEval(wxWindow& parent, time_t& lastUpdateCheck, std::st
 void checkForUpdateNow(wxWindow& parent, std::string& lastOnlineVersion);
 //----------------------------------------------------------------------------
 }
-
-#endif //VERSION_CHECK_H_324872374893274983275

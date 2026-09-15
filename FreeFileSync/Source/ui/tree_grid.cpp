@@ -166,13 +166,14 @@ void calcPercentage(std::vector<std::pair<uint64_t, int*>>& workList)
             return lhs.first * 100U % bytesTotal > rhs.first * 100U % bytesTotal;
         });
 
-        std::for_each(workList.begin(), workList.begin() + remainingPercent, [&](std::pair<uint64_t, int*>& pair) { ++*pair.second; });
+        for (std::pair<uint64_t, int*>& pair : std::span(workList.begin(), remainingPercent))
+            ++*pair.second;
     }
 }
 }
 
 
-template <bool ascending>
+template <SortDirection sortDir>
 struct TreeView::LessShortName
 {
     bool operator()(const TreeLine& lhs, const TreeLine& rhs) const
@@ -188,49 +189,35 @@ struct TreeView::LessShortName
 
         switch (lhs.type)
         {
-        case NodeType::root:
-                    return makeSortDirection(LessNaturalSort() /*even on Linux*/,
-                                             std::bool_constant<ascending>())(utfTo<Zstring>(static_cast<const RootNodeImpl*>(lhs.node)->displayName),
-                                                                              utfTo<Zstring>(static_cast<const RootNodeImpl*>(rhs.node)->displayName));
-        case NodeType::folder:
-                {
-                    const auto* folderL = static_cast<FolderPair*>(lhs.node->containerRef.lock().get());
-                    const auto* folderR = static_cast<FolderPair*>(rhs.node->containerRef.lock().get());
+            case NodeType::root:
+                return isLessFor<sortDir>(LessNaturalSort() /*even on Linux*/,
+                                          utfTo<Zstring>(static_cast<const RootNodeImpl*>(lhs.node)->displayName),
+                                          utfTo<Zstring>(static_cast<const RootNodeImpl*>(rhs.node)->displayName));
+            case NodeType::folder:
+            {
+                const auto* folderL = static_cast<FolderPair*>(lhs.node->containerRef.lock().get());
+                const auto* folderR = static_cast<FolderPair*>(rhs.node->containerRef.lock().get());
 
-                    if (!folderL)
+                if (!folderL)
                     return false;
-                    else if (!folderR)
-                        return true;
+                else if (!folderR)
+                    return true;
 
-                        return makeSortDirection(LessNaturalSort(), std::bool_constant<ascending>())(getFolderPairName(*folderL), getFolderPairName(*folderR));
-                    }
+                return isLessFor<sortDir>(LessNaturalSort(), getFolderPairName(*folderL), getFolderPairName(*folderR));
+            }
 
-                case NodeType::files:
-                            break;
-    }
-    assert(false);
+            case NodeType::files:
+                break;
+        }
+        assert(false);
         return false; //:= all equal
     }
 };
 
 
-template <bool ascending>
+template <SortDirection sortDir>
 void TreeView::sortSingleLevel(std::vector<TreeLine>& items, ColumnTypeOverview columnType)
 {
-    auto getBytes = [](const TreeLine& line) -> uint64_t
-    {
-        switch (line.type)
-        {
-            case NodeType::root:
-            case NodeType::folder:
-                return line.node->bytesGross;
-            case NodeType::files:
-                return line.node->bytesNet;
-        }
-        assert(false);
-        return 0U;
-    };
-
     auto getCount = [](const TreeLine& line) -> int
     {
         switch (line.type)
@@ -246,19 +233,39 @@ void TreeView::sortSingleLevel(std::vector<TreeLine>& items, ColumnTypeOverview 
         return 0;
     };
 
-    const auto lessBytes = [&](const TreeLine& lhs, const TreeLine& rhs) { return getBytes(lhs) < getBytes(rhs); };
-    const auto lessCount = [&](const TreeLine& lhs, const TreeLine& rhs) { return getCount(lhs) < getCount(rhs); };
+    auto getBytes = [](const TreeLine& line) -> uint64_t
+    {
+        switch (line.type)
+        {
+            case NodeType::root:
+            case NodeType::folder:
+                return line.node->bytesGross;
+            case NodeType::files:
+                return line.node->bytesNet;
+        }
+        assert(false);
+        return 0U;
+    };
+
+    const auto lessCount = [&](const TreeLine& lhs, const TreeLine& rhs)
+    {
+        return isLessFor<sortDir>(std::less(), getCount(lhs), getCount(rhs));
+    };
+    const auto lessBytes = [&](const TreeLine& lhs, const TreeLine& rhs)
+    {
+        return isLessFor<sortDir>(std::less(), getBytes(lhs), getBytes(rhs));
+    };
 
     switch (columnType)
     {
         case ColumnTypeOverview::folder:
-            std::sort(items.begin(), items.end(), LessShortName<ascending>());
+            std::sort(items.begin(), items.end(), LessShortName<sortDir>());
             break;
         case ColumnTypeOverview::itemCount:
-            std::sort(items.begin(), items.end(), makeSortDirection(lessCount, std::bool_constant<ascending>()));
+            std::sort(items.begin(), items.end(), lessCount);
             break;
         case ColumnTypeOverview::bytes:
-            std::sort(items.begin(), items.end(), makeSortDirection(lessBytes, std::bool_constant<ascending>()));
+            std::sort(items.begin(), items.end(), lessBytes);
             break;
     }
 }
@@ -284,9 +291,9 @@ void TreeView::getChildren(const Container& cont, unsigned int level, std::vecto
     calcPercentage(workList);
 
     if (currentSort_.ascending)
-        sortSingleLevel<true>(output, currentSort_.sortCol);
+        sortSingleLevel<SortDirection::ascending>(output, currentSort_.sortCol);
     else
-        sortSingleLevel<false>(output, currentSort_.sortCol);
+        sortSingleLevel<SortDirection::descending>(output, currentSort_.sortCol);
 }
 
 
@@ -345,9 +352,9 @@ void TreeView::applySubView(std::vector<RootNodeImpl>&& newView)
         calcPercentage(workList);
 
         if (currentSort_.ascending)
-            sortSingleLevel<true>(flatTree_, currentSort_.sortCol);
+            sortSingleLevel<SortDirection::ascending>(flatTree_, currentSort_.sortCol);
         else
-            sortSingleLevel<false>(flatTree_, currentSort_.sortCol);
+            sortSingleLevel<SortDirection::descending>(flatTree_, currentSort_.sortCol);
     }
 
     //restore node expansion status

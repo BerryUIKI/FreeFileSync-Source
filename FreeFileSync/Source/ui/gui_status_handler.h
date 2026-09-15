@@ -3,16 +3,13 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef GUI_STATUS_HANDLER_H_0183247018545
-#define GUI_STATUS_HANDLER_H_0183247018545
+#pragma once
 
 #include <zen/error_log.h>
 #include <wx/event.h>
 #include "progress_indicator.h"
 #include "main_dlg.h"
 #include "../status_handler.h"
-
 
 namespace fff
 {
@@ -76,7 +73,7 @@ public:
                                 std::chrono::seconds autoRetryDelay,
                                 const Zstring& soundFileSyncComplete,
                                 const Zstring& soundFileAlertPending,
-                                const zen::WindowLayout::Dimensions& dim,
+                                const zen::WindowLayout::Rect& dlgRect,
                                 bool autoCloseDialog); //noexcept!
     ~StatusHandlerFloatingDialog();
 
@@ -106,7 +103,7 @@ public:
     struct DlgOptions
     {
         bool autoCloseSelected;
-        zen::WindowLayout::Dimensions dim;
+        zen::WindowLayout::Rect dlgRect;
         FinalRequest finalRequest;
     };
     DlgOptions showResult();
@@ -125,5 +122,3 @@ private:
     std::optional<TaskResult> syncResult_;
 };
 }
-
-#endif //GUI_STATUS_HANDLER_H_0183247018545

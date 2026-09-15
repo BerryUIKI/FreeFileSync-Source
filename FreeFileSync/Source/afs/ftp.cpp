@@ -97,7 +97,7 @@ bool operator==(const FtpSessionCfg& lhs, const FtpSessionCfg& rhs)
 Zstring concatenateFtpFolderPathPhrase(const FtpLogin& login, const AfsPath& itemPath); //noexcept
 
 
-Zstring ansiToUtfEncoding(const std::string_view& str) //throw SysError
+Zstring ansiToUtfEncoding(const std::string_view str) //throw SysError
 {
     if (str.empty()) return {};
 
@@ -209,7 +209,7 @@ public:
         if (!std::all_of(it_, rngEnd, acceptChar))
             throw SysError(L"Expected char type not found.");
 
-        return makeStringView(std::exchange(it_, rngEnd), rngEnd);
+        return {std::exchange(it_, rngEnd), rngEnd};
     }
 
     template <class Function> //expects non-empty range!
@@ -219,13 +219,12 @@ public:
         if (rngEnd == it_)
             throw SysError(L"Expected char range not found.");
 
-        return makeStringView(std::exchange(it_, rngEnd), rngEnd);
+        return {std::exchange(it_, rngEnd), rngEnd};
     }
 
     char peekNextChar() const { return it_ == itEnd_ ? '\0' : *it_; }
 
 private:
-    /**/
     std::string_view::const_iterator it_;
     const std::string_view::const_iterator itEnd_;
 };
@@ -272,7 +271,7 @@ std::wstring formatFtpStatus(int sc)
         }
     }();
 
-    if (strLength(statusText) == 0)
+    if (strSize(statusText) == 0)
         return trimCpy(replaceCpy<std::wstring>(L"FTP status %x.", L"%x", numberTo<std::wstring>(sc)));
     else
         return trimCpy(replaceCpy<std::wstring>(L"FTP status %x: ", L"%x", numberTo<std::wstring>(sc)) + statusText);
@@ -316,7 +315,7 @@ public:
     void setContextTimeout(const std::weak_ptr<int>& timeoutSec) { timeoutSec_ = timeoutSec; }
 
     //returns server response (header data)
-    std::string perform(const AfsPath& itemPath, bool isDir, curl_ftpmethod pathMethod,
+    std::string perform(const AfsPath& itemPath, bool isDir, long pathMethod,
                         const std::vector<CurlOption>& extraOptions, bool requestUtf8) //throw SysError, SysErrorPassword, SysErrorFtpProtocol
     {
         if (requestUtf8) //avoid endless recursion
@@ -518,6 +517,10 @@ public:
             setCurlOption({CURLOPT_FTPSSLAUTH, CURLFTPAUTH_TLS}); //throw SysError
         }
 
+        //support older FTP servers with less than 2048 bit TLS keys ("CURLE_SSL_CONNECT_ERROR: TLS connect error: error:0A00018A:SSL routines::dh key too small")
+        //=> OpenSSL defaults to security level 2 (unless OPENSSL_TLS_SECURITY_LEVEL=level is defined during compilation) https://docs.openssl.org/master/man3/SSL_CTX_set_security_level/
+        setCurlOption({CURLOPT_SSL_CIPHER_LIST, "DEFAULT:@SECLEVEL=1"}); //throw SysError
+
         for (const CurlOption& option : extraOptions)
             setCurlOption(option); //throw SysError
 
@@ -536,7 +539,7 @@ public:
 
             if (const std::vector<std::string_view>& headerLines = splitFtpResponse(headerData);
                 !headerLines.empty())
-                if (const std::string_view& response = trimCpy(headerLines.back()); //that *should* be the server's error response
+                if (const std::string_view response = trimCpy(headerLines.back()); //that *should* be the server's error response
                     !response.empty())
                     errorMsg += (errorMsg.empty() ? L"" : L"\n") + utfTo<std::wstring>(response);
 #if 0
@@ -592,7 +595,7 @@ public:
         //=> '*' to the rescue: as long as we get an FTP response - *any* FTP response (including 550) - the connection itself is fine!
         const std::string& featBuf = runSingleFtpCommand("*FEAT", false /*requestUtf8*/); //throw SysError, SysErrorFtpProtocol
 
-        for (const std::string_view& line : splitFtpResponse(featBuf))
+        for (const std::string_view line : splitFtpResponse(featBuf))
             if (startsWith(line, "211 ") ||
                 startsWith(line, "500 ") ||
                 startsWith(line, "550 "))
@@ -625,7 +628,7 @@ public:
 
             const std::string& pwdBuf = runSingleFtpCommand("PWD", true /*requestUtf8*/); //throw SysError, SysErrorFtpProtocol
 
-            for (const std::string_view& line : splitFtpResponse(pwdBuf))
+            for (const std::string_view line : splitFtpResponse(pwdBuf))
                 if (startsWith(line, "257 "))
                 {
                     /* 257<space>[rubbish]"<directory-name>"<space><commentary>        according to libcurl
@@ -700,7 +703,7 @@ public:
         return utfToServerEncoding(serverPath); //throw SysError
     }
 
-    Zstring serverToUtfEncoding(const std::string_view& str) //throw SysError
+    Zstring serverToUtfEncoding(const std::string_view str) //throw SysError
     {
         if (isAsciiString(str)) //fast path
             return {str.begin(), str.end()};
@@ -767,7 +770,7 @@ private:
         std::string curlRelPath; //libcurl expects encoded paths (except for '/' char!!!) => bug: https://github.com/curl/curl/pull/4423
 
         split(getServerPathInternal(itemPath), //throw SysError
-              '/', [&](std::string_view comp)
+              '/', [&](const std::string_view comp)
         {
             if (!comp.empty())
             {
@@ -823,7 +826,7 @@ private:
 
         //get *last* FTP status code (can there be more than one!?)
         int ftpStatusCode = 0;
-        for (const std::string_view& line : splitFtpResponse(optsBuf))
+        for (const std::string_view line : splitFtpResponse(optsBuf))
             if (line.size() >= 4 &&
                 isDigit(line[0]) &&
                 isDigit(line[1]) &&
@@ -866,14 +869,15 @@ private:
     };
     using FeatureList = std::unordered_map<Zstring /*server name*/, Features, StringHashAsciiNoCase, StringEqualAsciiNoCase>;
 
+    inline static constinit Global<Protected<FeatureList>> globalServerFeatures_; //keep outside function-scope to avoid magic statics!
+
     bool getFeatureSupport(bool Features::* status) //throw SysError
     {
         if (!featureCache_)
         {
-            static constinit FunStatGlobal<Protected<FeatureList>> globalServerFeatures;
-            globalServerFeatures.setOnce([] { return std::make_unique<Protected<FeatureList>>(); });
+            globalServerFeatures_.setOnce([] { return std::make_unique<Protected<FeatureList>>(); });
 
-            const auto sf = globalServerFeatures.get();
+            const auto sf = globalServerFeatures_.get();
             if (!sf)
                 throw SysError(formatSystemError("FtpSession::getFeatureSupport", L"", L"Function call not allowed during application shutdown."));
 
@@ -901,7 +905,7 @@ private:
         Features output; //FEAT command: https://tools.ietf.org/html/rfc2389#page-4
         std::vector<std::string_view> lines = splitFtpResponse(featResponse);
 
-        auto it = std::find_if(lines.begin(), lines.end(), [](const std::string_view& line) { return startsWith(line, "211-") || startsWith(line, "211 "); });
+        auto it = std::find_if(lines.begin(), lines.end(), [](const std::string_view line) { return startsWith(line, "211-") || startsWith(line, "211 "); });
         if (it != lines.end())
         {
             ++it;
@@ -968,11 +972,7 @@ class FtpSessionManager //reuse (healthy) FTP sessions globally
     struct FtpSessionCache;
 
 public:
-    FtpSessionManager() : sessionCleaner_([this]
-    {
-        setCurrentThreadName(Zstr("Session Cleaner[FTP]"));
-        runGlobalSessionCleanUp(); /*throw ThreadStopRequest*/
-    }) {}
+    FtpSessionManager() {}
 
     void access(const FtpLogin& login, const std::function<void(FtpSession& session)>& useFtpSession /*throw X*/) //throw SysError, X
     {
@@ -995,6 +995,8 @@ public:
             else
                 sessionCfg = *cache.activeCfg;
         });
+
+        startGlobalSessionCleanUp();
 
         //create new FTP session outside the lock: 1. don't block other threads 2. non-atomic regarding "sessionCache"! => one session too many is not a problem!
         if (!ftpSession)
@@ -1077,47 +1079,55 @@ private:
     }
 
     //run a dedicated clean-up thread => it's unclear when the server let's a connection time out, so we do it preemptively
-    //context of worker thread:
-    void runGlobalSessionCleanUp() //throw ThreadStopRequest
+    void startGlobalSessionCleanUp()
     {
-        std::chrono::steady_clock::time_point lastCleanupTime;
-        for (;;)
+        static constinit std::once_flag onceStartThread; //=> no "magic static" code gen
+        std::call_once(onceStartThread, [this]
         {
-            const auto now = std::chrono::steady_clock::now();
-
-            if (now < lastCleanupTime + FTP_SESSION_CLEANUP_INTERVAL)
-                interruptibleSleep(lastCleanupTime + FTP_SESSION_CLEANUP_INTERVAL - now); //throw ThreadStopRequest
-
-            lastCleanupTime = std::chrono::steady_clock::now();
-
-            std::vector<Protected<FtpSessionCache>*> sessionCaches; //pointers remain stable, thanks to std::map<>
-
-            globalSessionCache_.access([&](GlobalFtpSessions& sessionsById)
+            sessionCleaner_ = InterruptibleThread([this]
             {
-                for (auto& [sessionId, idleSession] : sessionsById)
-                    sessionCaches.push_back(&idleSession);
-            });
+                setCurrentThreadName(Zstr("Session Cleaner[FTP]"));
 
-            for (Protected<FtpSessionCache>* sessionCache : sessionCaches)
+                std::chrono::steady_clock::time_point lastCleanupTime;
                 for (;;)
                 {
-                    bool done = false;
-                    sessionCache->access([&](FtpSessionCache& cache)
+                    const auto now = std::chrono::steady_clock::now();
+
+                    if (now < lastCleanupTime + FTP_SESSION_CLEANUP_INTERVAL)
+                        interruptibleSleep(lastCleanupTime + FTP_SESSION_CLEANUP_INTERVAL - now); //throw ThreadStopRequest
+
+                    lastCleanupTime = std::chrono::steady_clock::now();
+
+                    std::vector<Protected<FtpSessionCache>*> sessionCaches; //pointers remain stable, thanks to std::map<>
+
+                    globalSessionCache_.access([&](GlobalFtpSessions& sessionsById)
                     {
-                        for (std::unique_ptr<FtpSession>& ftpSession : cache.idleFtpSessions)
-                            if (!ftpSession->isHealthy()) //!isHealthy() sessions are destroyed after use => in this context this means they have been idle for too long
-                            {
-                                ftpSession.swap(cache.idleFtpSessions.back());
-                                /**/            cache.idleFtpSessions.pop_back(); //run ~FtpSession *inside* the lock! => avoid hitting server limits!
-                                return; //don't hold lock for too long: delete only one session at a time, then yield...
-                            }
-                        done = true;
+                        for (auto& [sessionId, idleSession] : sessionsById)
+                            sessionCaches.push_back(&idleSession);
                     });
-                    if (done)
-                        break;
-                    std::this_thread::yield(); //outside the lock
+
+                    for (Protected<FtpSessionCache>* sessionCache : sessionCaches)
+                        for (;;)
+                        {
+                            bool done = false;
+                            sessionCache->access([&](FtpSessionCache& cache)
+                            {
+                                for (std::unique_ptr<FtpSession>& ftpSession : cache.idleFtpSessions)
+                                    if (!ftpSession->isHealthy()) //!isHealthy() sessions are destroyed after use => in this context this means they have been idle for too long
+                                    {
+                                        ftpSession.swap(cache.idleFtpSessions.back());
+                                        /**/            cache.idleFtpSessions.pop_back(); //run ~FtpSession *inside* the lock! => avoid hitting server limits!
+                                        return; //don't hold lock for too long: delete only one session at a time, then yield...
+                                    }
+                                done = true;
+                            });
+                            if (done)
+                                break;
+                            std::this_thread::yield(); //outside the lock
+                        }
                 }
-        }
+            });
+        });
     }
 
     struct FtpSessionCache
@@ -1182,13 +1192,13 @@ FtpItem getFtpSymlinkInfo(const FtpLogin& login, const AfsPath& linkPath) //thro
             const std::string sizeBuf = session.runSingleFtpCommand("*SIZE " + session.getServerPathInternal(linkPath),
                                                                     true /*requestUtf8*/); //throw SysError, SysErrorFtpProtocol
             //alternative: use libcurl + CURLINFO_CONTENT_LENGTH_DOWNLOAD_T? => nah, surprise (motherfucker)! libcurl adds needless "REST 0" command!
-            for (const std::string_view& line : splitFtpResponse(sizeBuf))
+            for (const std::string_view line : splitFtpResponse(sizeBuf))
                 if (startsWith(line, "213 ")) // 213<space>[rubbish]<file size>        according to libcurl
                 {
                     if (isDigit(line.back())) //https://tools.ietf.org/html/rfc3659#section-4
                     {
                         auto it = std::find_if(line.rbegin(), line.rend(), [](const char c) { return !isDigit(c); });
-                        output.fileSize = stringTo<uint64_t>(makeStringView(it.base(), line.end()));
+                        output.fileSize = stringTo<uint64_t>(std::string_view(it.base(), line.end()));
 
                         mdtmBuf = session.runSingleFtpCommand("MDTM " + session.getServerPathInternal(linkPath),
                                                               true /*requestUtf8*/); //throw SysError, SysErrorFtpProtocol
@@ -1209,13 +1219,13 @@ FtpItem getFtpSymlinkInfo(const FtpLogin& login, const AfsPath& linkPath) //thro
 
         output.modTime = [&] //https://tools.ietf.org/html/rfc3659#section-3
         {
-            for (const std::string_view& line : splitFtpResponse(mdtmBuf))
+            for (const std::string_view line : splitFtpResponse(mdtmBuf))
                 if (startsWith(line, "213 ")) // 213<space> YYYYMMDDHHMMSS[.sss]       "Time values are always represented in UTC (GMT)" ...and libcurl thinks so, too
                 {
                     const auto itStart = line.begin() + 4;
                     const auto itEnd = std::find(itStart, line.end(), '.');
 
-                    if (const TimeComp tc = parseTime("%Y%m%d%H%M%S", makeStringView(itStart, itEnd));
+                    if (const TimeComp tc = parseTime("%Y%m%d%H%M%S", std::string_view(itStart, itEnd));
                         tc != TimeComp())
                         if (const auto [modTime, timeValid] = utcToTimeT(tc);
                             timeValid)
@@ -1258,7 +1268,7 @@ public:
                 {CURLOPT_WRITEDATA, &rawListing},
                 {CURLOPT_WRITEFUNCTION, onBytesReceived},
             };
-            curl_ftpmethod pathMethod = CURLFTPMETHOD_SINGLECWD;
+            long pathMethod = CURLFTPMETHOD_SINGLECWD;
 
             if (session.supportsMlsd()) //throw SysError
             {
@@ -1300,7 +1310,7 @@ private:
     static std::vector<FtpItem> parseMlsd(const std::string& buf, FtpSession& session) //throw SysError
     {
         std::vector<FtpItem> output;
-        for (const std::string_view& line : splitFtpResponse(buf))
+        for (const std::string_view line : splitFtpResponse(buf))
         {
             FtpItem item = parseMlstLine(line, session); //throw SysError
             if (item.itemName != Zstr(".") &&
@@ -1310,7 +1320,7 @@ private:
         return output;
     }
 
-    static FtpItem parseMlstLine(const std::string_view& rawLine, FtpSession& session) //throw SysError
+    static FtpItem parseMlstLine(const std::string_view rawLine, FtpSession& session) //throw SysError
     {
         /*  https://tools.ietf.org/html/rfc3659
             type=cdir;sizd=4096;modify=20170116230740;UNIX.mode=0755;UNIX.uid=874;UNIX.gid=869;unique=902g36e1c55; .
@@ -1328,8 +1338,8 @@ private:
             if (itBlank == rawLine.end())
                 throw SysError(L"Item name not available.");
 
-            const std::string_view facts = makeStringView(itBegin, itBlank);
-            item.itemName = session.serverToUtfEncoding(makeStringView(itBlank + 1, rawLine.end())); //throw SysError
+            const std::string_view facts(itBegin, itBlank);
+            item.itemName = session.serverToUtfEncoding(std::string_view(itBlank + 1, rawLine.end())); //throw SysError
 
             std::string_view typeFact;
             std::string_view fileSize;
@@ -1370,7 +1380,7 @@ private:
                                BUT: practially this will be the inode ID/file index, so we can assume persistence */
                         const std::string_view uniqueId = afterFirst(fact, '=', IfNotFoundReturn::none);
                         assert(!uniqueId.empty());
-                        item.filePrint = hashString<AFS::FingerPrint>(uniqueId);
+                        item.filePrint = hashBinaryString<AFS::FingerPrint>(uniqueId);
                         //other metadata to hash e.g. create fact? => not available on Linux-hosted FTP!
                     }
                 }
@@ -1436,9 +1446,9 @@ private:
 
         std::vector<FtpItem> output;
 
-        std::for_each(it, lines.end(), [&](const std::string_view line)
+        for (const std::string_view line : std::span(it, lines.end()))
         {
-            auto& ownerGroupCount = [&]() -> std::optional<int>&
+            auto& ownerGroupCount = [&] -> std::optional<int>&
             {
                 assert(!line.empty()); //see splitFtpResponse()
                 switch (line[0])
@@ -1473,12 +1483,12 @@ private:
             if (item.itemName != Zstr(".") &&
                 item.itemName != Zstr(".."))
                 output.push_back(item);
-        });
+        }
 
         return output;
     }
 
-    static FtpItem parseUnixLine(const std::string_view& rawLine, time_t utcTimeNow, int utcCurrentYear, int ownerGroupCount, FtpSession& session) //throw SysError
+    static FtpItem parseUnixLine(const std::string_view rawLine, time_t utcTimeNow, int utcCurrentYear, int ownerGroupCount, FtpSession& session) //throw SysError
     {
         /* Unix standard listing: "ls -l --all"
 
@@ -1663,7 +1673,7 @@ private:
         const int utcCurrentYear = tc.year;
 
         std::vector<FtpItem> output;
-        for (const std::string_view& line : splitFtpResponse(buf))
+        for (const std::string_view line : splitFtpResponse(buf))
         {
             try
             {
@@ -1813,7 +1823,7 @@ private:
 
                 case AFS::ItemType::folder:
                     if (std::shared_ptr<AFS::TraverserCallback> cbSub = cb.onFolder({item.itemName, false /*isFollowedSymlink*/})) //throw X
-                        workload_.push_back({itemPath, std::move(cbSub)});
+                        workload_.emplace_back(itemPath, std::move(cbSub));
                     break;
 
                 case AFS::ItemType::symlink:
@@ -1831,7 +1841,7 @@ private:
                             if (target.type == AFS::ItemType::folder)
                             {
                                 if (std::shared_ptr<AFS::TraverserCallback> cbSub = cb.onFolder({item.itemName, true /*isFollowedSymlink*/})) //throw X
-                                    workload_.push_back({itemPath, std::move(cbSub)});
+                                    workload_.emplace_back(itemPath, std::move(cbSub));
                             }
                             else //a file or named pipe, etc.
                                 cb.onFile({item.itemName, target.fileSize, target.modTime, item.filePrint, true /*isFollowedSymlink*/}); //throw X
@@ -1984,7 +1994,7 @@ struct InputStreamFtp : public AFS::InputStream
 {
     InputStreamFtp(const FtpLogin& login, const AfsPath& filePath)
     {
-        worker_ = InterruptibleThread([asyncStreamOut = this->asyncStreamIn_, login, filePath]
+        worker_ = InterruptibleThread([asyncStreamOut = asyncStreamIn_, login, filePath]
         {
             setCurrentThreadName(Zstr("Istream ") + utfTo<Zstring>(getCurlDisplayPath(login, filePath)));
             try
@@ -2053,8 +2063,8 @@ struct OutputStreamFtp : public AFS::OutputStreamImpl
         futUploadDone_ = promUploadDone.get_future();
 
         worker_ = InterruptibleThread([login, filePath,
-                                       asyncStreamIn = this->asyncStreamOut_,
-                                       pUploadDone   = std::move(promUploadDone)]() mutable
+                                       asyncStreamIn = asyncStreamOut_,
+                                       pUploadDone   = std::move(promUploadDone)] mutable
         {
             setCurrentThreadName(Zstr("Ostream ") + utfTo<Zstring>(getCurlDisplayPath(login, filePath)));
             try
@@ -2435,7 +2445,7 @@ private:
 
     //symlink handling: follow
     //already existing: undefined behavior! (e.g. fail/overwrite/auto-rename)
-    FileCopyResult copyFileForSameAfsType(const AfsPath& sourcePath, const StreamAttributes& attrSource, //throw FileError, (ErrorFileLocked), X
+    FileCopyResult copyFileForSameAfsType(const AfsPath& sourcePath, const StreamAttributes& sourceAttr, //throw FileError, (ErrorFileLocked), X
                                           const AbstractPath& targetPath, bool copyFilePermissions, const IoCallback& notifyUnbufferedIO /*throw X*/) const override
     {
         //no native FTP file copy => use stream-based file copy:
@@ -2443,7 +2453,7 @@ private:
             throw FileError(replaceCpy(_("Cannot write permissions of %x."), L"%x", fmtPath(AFS::getDisplayPath(targetPath))), _("Operation not supported by device."));
 
         //already existing: undefined behavior! (e.g. fail/overwrite/auto-rename)
-        return copyFileAsStream(sourcePath, attrSource, targetPath, notifyUnbufferedIO); //throw FileError, (ErrorFileLocked), X
+        return copyFileAsStream(sourcePath, sourceAttr, targetPath, notifyUnbufferedIO); //throw FileError, (ErrorFileLocked), X
     }
 
     //symlink handling: follow
@@ -2703,7 +2713,7 @@ AbstractPath fff::createItemPathFtp(const Zstring& itemPathPhrase) //noexcept
     trim(pathPhrase);
 
     if (startsWithAsciiNoCase(pathPhrase, ftpPrefix))
-        pathPhrase = pathPhrase.c_str() + strLength(ftpPrefix);
+        pathPhrase = pathPhrase.c_str() + strSize(ftpPrefix);
     trim(pathPhrase, TrimSide::left, [](Zchar c) { return c == Zstr('/') || c == Zstr('\\'); });
 
     const ZstringView credentials = beforeFirst<ZstringView>(pathPhrase, Zstr('@'), IfNotFoundReturn::none);
@@ -2717,7 +2727,7 @@ AbstractPath fff::createItemPathFtp(const Zstring& itemPathPhrase) //noexcept
     const ZstringView options  =  afterFirst(fullPathOpt, Zstr('|'), IfNotFoundReturn::none);
 
     auto it = std::find_if(fullPath.begin(), fullPath.end(), [](Zchar c) { return c == '/' || c == '\\'; });
-    const ZstringView serverPort = makeStringView(fullPath.begin(), it);
+    const ZstringView serverPort(fullPath.begin(), it);
     const AfsPath serverRelPath = sanitizeDeviceRelativePath({it, fullPath.end()});
 
     if (std::optional<std::pair<Zstring, int /*optional: port*/>> ip6AndPort = parseIpv6Address(serverPort)) //e.g. 2001:db8::ff00:42:8329 or [::1]:80

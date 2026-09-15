@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef POPUP_DLG_H_820780154723456
-#define POPUP_DLG_H_820780154723456
+#pragma once
 
 #include <unordered_set>
 #include <unordered_map>
@@ -14,7 +12,6 @@
 #include <wx/image.h>
 #include <wx/string.h>
 #include <wx/textctrl.h>
-
 
 namespace zen
 {
@@ -37,8 +34,8 @@ enum class ConfirmationButton3
 };
 enum class ConfirmationButton
 {
-    cancel = static_cast<int>(ConfirmationButton3::cancel), //[!] Clang requires "static_cast"
-    accept = static_cast<int>(ConfirmationButton3::accept), //
+    cancel = static_cast<int>(ConfirmationButton3::cancel),
+    accept = static_cast<int>(ConfirmationButton3::accept),
 };
 enum class ConfirmationButton2
 {
@@ -99,5 +96,3 @@ private:
 
 int getTextCtrlHeight(wxTextCtrl& ctrl, double rowCount);
 }
-
-#endif //POPUP_DLG_H_820780154723456

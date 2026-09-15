@@ -13,17 +13,17 @@
 #include <zen/basic_math.h>
 #include <zen/string_tools.h>
 #include <zen/scope_guard.h>
+#include <zen/sys_error.h>
 #include <zen/utf.h>
 #include <zen/zstring.h>
 #include <zen/format_unit.h>
 #include "color_tools.h"
 #include "dc.h"
-
     #include <gtk/gtk.h>
 
 using namespace zen;
 
-/* wxWidgets 3.3 defaults to system-powered double-buffering (WS_EX_COMPOSITED) on Windows:
+/* !!OUTDATED!!: wxWidgets 3.3.0 defaults to system-powered double-buffering (WS_EX_COMPOSITED) on Windows:
     => ~60% higher CPU time (test case: scrolling large file list via keyboard) see comment in file_grid.cpp :((
 
         "wxMSW now uses double buffering by default, meaning that updating the
@@ -43,8 +43,12 @@ using namespace zen;
     CAVEAT: MSWDisableComposited() leads to severe flickering for other child windows (e.g. wxStaticBitmap, wxBitmapButton)
         that lack custom double-buffering. It's even worse since wxWidgets in its wisdom sets WS_EX_COMPOSITED
         together with CS_HREDRAW/CS_VREDRAW, https://github.com/vadz/wxWidgets/blob/8de0694a5e9c9d7c24e0af2ccf71454df5e6b9d0/src/msw/window.cpp#L507
-        and MSWDisableComposited() only removes former attribute.      */
+        and MSWDisableComposited() only removes former attribute.
 
+    ============================================================================================
+    ||  !!!UPDATE!!! wxWidgets 3.3.2 undoes the MADNESS, no more WS_EX_COMPOSITED by default: ||
+    ||  https://github.com/wxWidgets/wxWidgets/pull/25808                                     ||
+    ============================================================================================      */
 
 //let's NOT create wxWidgets objects statically:
 wxColor GridData::getColorSelectionGradientFrom() { return {137, 172, 255}; } //blue: HSL: 158, 255, 196   HSV: 222, 0.46, 1
@@ -57,7 +61,6 @@ namespace
 {
 //------------------------------ Grid Parameters --------------------------------
 wxColor getColorLabelText(bool enabled) { return wxSystemSettings::GetColour(enabled ? wxSYS_COLOUR_BTNTEXT : wxSYS_COLOUR_GRAYTEXT); }
-wxColor getColorGridLine()              { return wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW); }
 
 wxColor getColorLabelGradientFrom()
 {
@@ -169,8 +172,7 @@ int GridData::getBestSize(const wxReadOnlyDC& dc, size_t row, ColumnType colType
 
 wxRect GridData::drawCellBorder(wxDC& dc, const wxRect& rect) //returns remaining rectangle
 {
-    clearArea(dc, {rect.x + rect.width - dipToWxsize(1), rect.y, dipToWxsize(1), rect.height}, getColorGridLine()); //right border
-    clearArea(dc, {rect.x, rect.y + rect.height - dipToWxsize(1), rect.width, dipToWxsize(1)}, getColorGridLine()); //bottom border
+    drawRectangleBorder(dc, rect, wxSystemSettings::GetColour(wxSYS_COLOUR_GRIDLINES), dipToWxsize(1), wxRIGHT | wxBOTTOM);
 
     return {rect.x, rect.y, rect.width - dipToWxsize(1), rect.height - dipToWxsize(1)};
 }
@@ -264,15 +266,13 @@ wxRect GridData::drawColumnLabelBackground(wxDC& dc, const wxRect& rect, bool hi
     else //regular background gradient
         dc.GradientFillLinear(rect, getColorLabelGradientFrom(), getColorLabelGradientTo(), wxSOUTH);
 
-    //left border
-    clearArea(dc, wxRect(rect.GetTopLeft(), wxSize(dipToWxsize(1), rect.height)), wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
+    drawRectangleBorder(dc, rect, wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW), dipToWxsize(1), wxLEFT);
 
     //right border
     dc.GradientFillLinear(wxRect(rect.x + rect.width - dipToWxsize(1), rect.y, dipToWxsize(1), rect.height),
                           getColorLabelGradientFrom(), wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW), wxSOUTH);
 
-    //bottom border
-    clearArea(dc, wxRect(rect.x, rect.y + rect.height - dipToWxsize(1), rect.width, dipToWxsize(1)), wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW));
+    drawRectangleBorder(dc, rect, wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW), dipToWxsize(1), wxBOTTOM);
 
     return rect.Deflate(dipToWxsize(1), dipToWxsize(1));
 }
@@ -374,11 +374,7 @@ private:
             There should be no internal forwarding of the message, since DefWindowProc propagates
             it up the parent chain until it finds a window that processes it."
 
-            On macOS there is no such propagation! => we need a redirection (the same wxGrid implements)
-
-            new wxWidgets 3.0 screw-up for GTK2: wxScrollHelperEvtHandler::ProcessEvent() ignores wxEVT_MOUSEWHEEL events
-            thereby breaking the scenario of redirection to parent we need here (but also breaking their very own wxGrid sample)
-            => call wxScrolledWindow mouse wheel handler directly                          */
+            On macOS there is no such propagation! => we need a redirection (the same wxGrid implements)    */
 
         //wxWidgets never ceases to amaze: multi-line scrolling is implemented maximally inefficient by repeating wxEVT_SCROLLWIN_LINEUP!! => WTF!
         if (event.GetWheelAxis() == wxMOUSE_WHEEL_VERTICAL && //=> reimplement wxScrollHelperBase::HandleOnMouseWheel() in a non-retarded way
@@ -398,11 +394,11 @@ private:
             parent_.scrollDelta(0, rowsDelta);
         }
         else
-            parent_.HandleOnMouseWheel(event);
+            event.Skip();
 
-        onMouseMovement(event);
-        event.Skip(false);
-
+    wxMouseEvent motionEvent(wxEVT_MOTION); 
+    motionEvent.SetPosition(event.GetPosition());
+    GetEventHandler()->ProcessEvent(motionEvent); //update mouse hover and tooltip!
         //if (!sendEventToParent(event))
         //   event.Skip();
     }
@@ -444,20 +440,17 @@ private:
         dc.GradientFillLinear(rect, getColorLabelGradientFrom(), getColorLabelGradientTo(), wxSOUTH);
 
         //left border
-        dc.GradientFillLinear(wxRect(rect.GetTopLeft(), wxSize(dipToWxsize(1), rect.height)),
+        dc.GradientFillLinear({rect.x, rect.y, dipToWxsize(1), rect.height},
                               getColorLabelGradientFrom(), wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW), wxSOUTH);
 
-        //left border2
-        clearArea(dc, wxRect(rect.x + dipToWxsize(1), rect.y, dipToWxsize(1), rect.height),
-                  wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
+        clearArea(dc, {rect.x + dipToWxsize(1), rect.y, dipToWxsize(1), rect.height}, wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
 
         //right border
         dc.GradientFillLinear(wxRect(rect.x + rect.width - dipToWxsize(1), rect.y, dipToWxsize(1), rect.height),
                               getColorLabelGradientFrom(), wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW), wxSOUTH);
 
         //bottom border
-        clearArea(dc, wxRect(rect.x, rect.y + rect.height - dipToWxsize(1), rect.width, dipToWxsize(1)),
-                  wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW));
+        drawRectangleBorder(dc, rect, wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW), dipToWxsize(1), wxBOTTOM);
     }
 };
 
@@ -495,6 +488,7 @@ public:
     }
 
     int getRowHeight() const { return rowHeight_; } //guarantees to return size >= 1 !
+
     void setRowHeight(int height) { assert(height > 0); rowHeight_ = std::max(1, height); }
 
     wxRect getRowLabelArea(size_t row) const //returns empty rect if row not found
@@ -536,17 +530,9 @@ private:
         //clearArea(dc, rect, getColorRowLabel());
         dc.GradientFillLinear(rect, getColorLabelGradientFrom(), getColorLabelGradientTo(), wxEAST); //clear overlapping cells
 
-        //top border
-        clearArea(dc, wxRect(rect.x, rect.y, rect.width, dipToWxsize(1)), wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
+        drawRectangleBorder(dc, rect, wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW),    dipToWxsize(1), wxTOP);
+        drawRectangleBorder(dc, rect, wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW), dipToWxsize(1), wxLEFT | wxRIGHT | wxBOTTOM);
 
-        //left border
-        clearArea(dc, wxRect(rect.x, rect.y, dipToWxsize(1), rect.height), wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW));
-
-        //right border
-        clearArea(dc, wxRect(rect.x + rect.width - dipToWxsize(1), rect.y, dipToWxsize(1), rect.height), wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW));
-
-        //bottom border
-        clearArea(dc, wxRect(rect.x, rect.y + rect.height - dipToWxsize(1), rect.width, dipToWxsize(1)), wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW));
 
         //label text
         wxRect textRect = rect;
@@ -556,21 +542,24 @@ private:
         GridData::drawCellText(dc, textRect, formatRowNum(row), wxALIGN_CENTRE);
     }
 
-    void onMouseLeftDown(wxMouseEvent& event) override { redirectMouseEvent(event); }
-    void onMouseLeftUp  (wxMouseEvent& event) override { redirectMouseEvent(event); }
-    void onMouseMovement(wxMouseEvent& event) override { redirectMouseEvent(event); }
-    void onLeaveWindow  (wxMouseEvent& event) override { redirectMouseEvent(event); }
+    void onMouseLeftDown  (wxMouseEvent& event) override { redirectMouseEvent(event); }
+    void onMouseLeftUp    (wxMouseEvent& event) override { redirectMouseEvent(event); }
+    void onMouseLeftDouble(wxMouseEvent& event) override { redirectMouseEvent(event); }
+    void onMouseRightDown (wxMouseEvent& event) override { redirectMouseEvent(event); }
+    void onMouseRightUp   (wxMouseEvent& event) override { redirectMouseEvent(event); }
+    void onMouseMovement  (wxMouseEvent& event) override { redirectMouseEvent(event); }
+    void onLeaveWindow    (wxMouseEvent& event) override { redirectMouseEvent(event); }
     void onMouseCaptureLost(wxMouseCaptureLostEvent& event) override { refParent().getMainWin().GetEventHandler()->ProcessEvent(event); }
 
     void redirectMouseEvent(wxMouseEvent& event)
     {
-        event.m_x = 0; //simulate click on left side of mainWin_!
-
         wxWindow& mainWin = refParent().getMainWin();
-        mainWin.GetEventHandler()->ProcessEvent(event);
 
         if (event.ButtonDown() && wxWindow::FindFocus() != &mainWin)
             mainWin.SetFocus();
+
+        event.m_x = 0; //simulate click on left side of mainWin_!
+        mainWin.GetEventHandler()->ProcessEvent(event);
     }
 
     int rowHeight_;
@@ -600,8 +589,8 @@ public:
 private:
     wxWindow& wnd_;
     const size_t col_;
-    const int    startWidth_;
-    const int    clientPosX_;
+    const int startWidth_;
+    const int clientPosX_;
 };
 
 
@@ -837,6 +826,13 @@ private:
     void onMouseRightDown(wxMouseEvent& event) override
     {
         evalMouseMovement(event.GetPosition()); //update highlight in obscure cases (e.g. right-click while other context menu is open)
+        assert(!freezeHighlight_);
+        freezeHighlight_ = true; //while context menu is shown (wxEVT_LEAVE_WINDOW!)
+        ZEN_ON_SCOPE_EXIT
+        (
+            freezeHighlight_ = false; //update mouse highlight (e.g. mouse position changed after showing context menu) => needed on Linux/macOS
+            evalMouseMovement(ScreenToClient(wxGetMousePosition()));
+        );
 
         const wxPoint mousePos = GetPosition() + event.GetPosition();
 
@@ -850,9 +846,6 @@ private:
             //notify right click (on free space after last column)
             if (fillGapAfterColumns)
                 sendEventToParent(GridLabelClickEvent(EVENT_GRID_COL_LABEL_MOUSE_RIGHT, ColumnType::none, mousePos));
-
-        //update mouse highlight (e.g. mouse position changed after showing context menu) => needed on Linux/macOS
-        evalMouseMovement(ScreenToClient(wxGetMousePosition()));
 
         event.Skip();
     }
@@ -934,16 +927,15 @@ private:
 
     void onLeaveWindow(wxMouseEvent& event) override
     {
-        if (!activeResizing_ && !activeClickOrMove_)
-            //wxEVT_LEAVE_WINDOW does not respect mouse capture! -> however highlight is drawn unconditionally during move/resize!
-            setMouseHighlight(std::nullopt);
+        setMouseHighlight(std::nullopt);
+        //wxEVT_LEAVE_WINDOW does not respect mouse capture! -> however highlight is drawn unconditionally during move/resize!
 
         event.Skip();
     }
 
     void setMouseHighlight(const std::optional<size_t>& hl)
     {
-        if (highlightCol_ != hl)
+        if (!freezeHighlight_ && highlightCol_ != hl)
         {
             highlightCol_ = hl;
             Refresh();
@@ -953,6 +945,7 @@ private:
     std::optional<ColumnResizing> activeResizing_;
     std::optional<ColumnMove>     activeClickOrMove_;
     std::optional<size_t>         highlightCol_;
+    bool freezeHighlight_ = false;
 
     int colLabelHeight_ = 0;
     const wxFont labelFont_;
@@ -1134,6 +1127,13 @@ private:
         if (auto prov = refParent().getDataProvider())
         {
             evalMouseMovement(event.GetPosition()); //update highlight in obscure cases (e.g. right-click while other context menu is open)
+            assert(!freezeHighlight_);
+            freezeHighlight_ = true; //while context menu is shown (wxEVT_LEAVE_WINDOW!)
+            ZEN_ON_SCOPE_EXIT
+            (
+                freezeHighlight_ = false; //update mouse highlight (e.g. mouse position changed after showing context menu) => needed on Linux/macOS
+                evalMouseMovement(ScreenToClient(wxGetMousePosition()));
+            );
 
             const wxPoint   mousePos = GetPosition() + event.GetPosition();
             const ptrdiff_t rowCount = refParent().getRowCount();
@@ -1183,9 +1183,6 @@ private:
                     }
                 }
             }
-
-            //update mouse highlight (e.g. mouse position changed after showing context menu) => needed on Linux/macOS
-            evalMouseMovement(ScreenToClient(wxGetMousePosition()));
         }
         event.Skip(); //allow changing focus
     }
@@ -1219,6 +1216,8 @@ private:
             assert((mouseClick.GetEventType() == EVENT_GRID_MOUSE_RIGHT_DOWN) == event.RightUp());
 
             activeSelection_.reset(); //release mouse capture *before* sending the event (which might show a modal popup dialog requiring the mouse!!!)
+
+            setMouseHighlight(std::nullopt); //clear because irrelevant for context menu after range-selection!?
 
             const size_t rowFirst = std::min(rowFrom, rowTo);     //sort + convert to half-open range
             const size_t rowLast  = std::max(rowFrom, rowTo) + 1; //
@@ -1312,8 +1311,8 @@ private:
 
     void onLeaveWindow(wxMouseEvent& event) override
     {
-        if (!activeSelection_) //wxEVT_LEAVE_WINDOW does not respect mouse capture!
-            setMouseHighlight(std::nullopt);
+        setMouseHighlight(std::nullopt);
+        //wxEVT_LEAVE_WINDOW does not respect mouse capture! -> however highlight is drawn unconditionally during selection!
 
         //CAVEAT: we can get wxEVT_MOTION *after* wxEVT_LEAVE_WINDOW: see RowLabelWin::redirectMouseEvent()
         //        => therefore we also redirect wxEVT_LEAVE_WINDOW, but user will see a little flicker when moving between RowLabelWin and MainWin
@@ -1461,7 +1460,7 @@ private:
     void setMouseHighlight(const std::optional<MouseHighlight>& hl)
     {
         assert(!hl || (hl->row < refParent().getRowCount() && hl->rowHover != HoverArea::none));
-        if (highlight_ != hl)
+        if (!freezeHighlight_ && highlight_ != hl)
         {
             if (highlight_)
                 refreshRow(highlight_->row);
@@ -1479,6 +1478,7 @@ private:
 
     std::optional<MouseSelection> activeSelection_; //bound while user is selecting with mouse
     std::optional<MouseHighlight> highlight_;
+    bool freezeHighlight_ = false;
 
     size_t cursorRow_ = 0;
     size_t selectionAnchor_ = 0;
@@ -1680,28 +1680,6 @@ wxSize Grid::GetSizeAvailableForScrollTarget(const wxSize& size)
     }();
 
     //2. try(!) to determine scrollbar sizes:
-#if GTK_MAJOR_VERSION == 2
-    /* Ubuntu 19.10: "scrollbar-spacing" has a default value of 3: https://developer.gnome.org/gtk2/stable/GtkScrolledWindow.html#GtkScrolledWindow--s-scrollbar-spacing
-        => the default Ubuntu theme (but also our Gtk2Styles.rc) set it to 0, but still the first call to gtk_widget_style_get() returns 3: why?
-        => maybe styles are applied asynchronously? GetClientSize() is affected by this, so can't use!
-        => always ignore spacing to get consistent scrollbar dimensions!  */
-    GtkScrolledWindow* scrollWin = GTK_SCROLLED_WINDOW(wxWindow::m_widget);
-    assert(scrollWin);
-    GtkWidget* rangeH = ::gtk_scrolled_window_get_hscrollbar(scrollWin);
-    GtkWidget* rangeV = ::gtk_scrolled_window_get_vscrollbar(scrollWin);
-
-    GtkRequisition reqH = {};
-    GtkRequisition reqV = {};
-    if (rangeH) ::gtk_widget_size_request(rangeH, &reqH);
-    if (rangeV) ::gtk_widget_size_request(rangeV, &reqV);
-    assert(reqH.width > 0 && reqH.height > 0);
-    assert(reqV.width > 0 && reqV.height > 0);
-
-    const wxSize scrollBarSizeTmp(reqV.width, reqH.height);
-    assert(scrollBarHeightH_ == 0 || scrollBarHeightH_ == scrollBarSizeTmp.y);
-    assert(scrollBarWidthV_  == 0 || scrollBarWidthV_  == scrollBarSizeTmp.x);
-
-#elif GTK_MAJOR_VERSION == 3
     //scrollbar size increases dynamically on mouse-hover!
     //see "overlay scrolling": https://developer.gnome.org/gtk3/stable/GtkScrolledWindow.html#gtk-scrolled-window-set-overlay-scrolling
     //luckily "scrollbar-spacing" is stable on GTK3
@@ -1715,9 +1693,6 @@ wxSize Grid::GetSizeAvailableForScrollTarget(const wxSize& size)
     assert(scrollBarSizeTmp.y == 0 ||
            scrollBarSizeTmp.y == 6 || scrollBarSizeTmp.y == 13 || //Ubuntu 19.10
            scrollBarSizeTmp.y == 16); //openSuse
-#else
-#error unknown GTK version!
-#endif
     scrollBarHeightH_ = std::max(scrollBarHeightH_, scrollBarSizeTmp.y);
     scrollBarWidthV_  = std::max(scrollBarWidthV_,  scrollBarSizeTmp.x);
     //this function is called again by wxScrollHelper::AdjustScrollbars() if SB_SHOW_ALWAYS-scrollbars are not yet shown => scrollbar size > 0 eventually!
@@ -2170,8 +2145,8 @@ wxRect Grid::getColumnLabelArea(ColumnType colType) const
     if (itCol != absWidths.end())
     {
         ptrdiff_t posX = 0;
-        std::for_each(absWidths.begin(), itCol,
-        [&](const ColumnWidth& cw) { posX += cw.width; });
+        for (const ColumnWidth& cw : std::span(absWidths.begin(), itCol))
+            posX += cw.width;
 
         return wxRect(wxPoint(posX, 0), wxSize(itCol->width, getColumnLabelHeight()));
     }

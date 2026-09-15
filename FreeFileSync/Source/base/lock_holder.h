@@ -1,13 +1,15 @@
-#ifndef LOCK_HOLDER_H_489572039485723453425
-#define LOCK_HOLDER_H_489572039485723453425
+// *****************************************************************************
+// * This file is part of the FreeFileSync project. It is distributed under    *
+// * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
+// * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
+// *****************************************************************************
+#pragma once
 
 #include "dir_lock.h"
 #include "process_callback.h"
 
-
 namespace fff
 {
-
 //Attention: 1. call after having checked directory existence!
 //           2. perf: remove folder aliases (e.g. case differences) *before* calling this function!!!
 
@@ -50,5 +52,3 @@ private:
     std::vector<DirLock> lockHolder_;
 };
 }
-
-#endif //LOCK_HOLDER_H_489572039485723453425

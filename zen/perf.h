@@ -3,15 +3,12 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef PERF_H_83947184145342652456
-#define PERF_H_83947184145342652456
+#pragma once
 
 #include <chrono>
 #include "string_tools.h"
 
     #include <iostream>
-
 
 //############# two macros for quick performance measurements ###############
 #define PERF_START zen::PerfTimer perfTest;
@@ -99,5 +96,3 @@ private:
     bool resultShown_ = false;
 };
 }
-
-#endif //PERF_H_83947184145342652456

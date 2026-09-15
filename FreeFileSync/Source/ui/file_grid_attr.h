@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef COLUMN_ATTR_H_189467891346732143213
-#define COLUMN_ATTR_H_189467891346732143213
+#pragma once
 
 #include <vector>
 #include <cassert>
 #include <wx+/dc.h>
-
 
 namespace fff
 {
@@ -101,5 +98,3 @@ bool getDefaultSortDirection(ColumnTypeCenter type) //true: ascending; false: de
 }
 //------------------------------------------------------------------
 }
-
-#endif //COLUMN_ATTR_H_189467891346732143213

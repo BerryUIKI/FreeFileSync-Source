@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef TRAY_ICON_H_84217830427534285
-#define TRAY_ICON_H_84217830427534285
+#pragma once
 
 #include <functional>
 #include <memory>
 #include <wx/string.h>
-
 
 /*  show tray icon with progress during lifetime of this instance
 
@@ -46,5 +43,3 @@ private:
     double activeFraction_ = 1;
 };
 }
-
-#endif //TRAY_ICON_H_84217830427534285

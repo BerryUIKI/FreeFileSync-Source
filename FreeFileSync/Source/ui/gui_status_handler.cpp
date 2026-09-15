@@ -108,11 +108,13 @@ StatusHandlerTemporaryPanel::~StatusHandlerTemporaryPanel()
     //Workaround wxAuiManager crash when starting panel resizing during comparison and holding button until after comparison has finished:
     //- unlike regular window resizing, wxAuiManager does not run a dedicated event loop while the mouse button is held
     //- wxAuiManager internally stores the panel index that is currently resized
-    //- our previous hiding of the compare status panel invalidates this index
+    //- our hiding of the compare status panel invalidates this index
     // => the next mouse move will have wxAuiManager crash => another fine piece of "wxQuality" code
     // => mitigate:
     wxMouseCaptureLostEvent dummy;
-    mainDlg_.auiMgr_.ProcessEvent(dummy); //should be no-op if no mouse buttons are pressed
+    mainDlg_.ProcessEvent(dummy); //trigger wxAuiManager::OnCaptureLost(); should be no-op if no mouse buttons are pressed
+    if (wxWindow::GetCapture() == &mainDlg_)
+        mainDlg_.ReleaseMouse();
 
     mainDlg_.auiMgr_.GetPane(mainDlg_.compareStatus_->getAsWindow()).Hide();
     mainDlg_.auiMgr_.Update();
@@ -318,8 +320,7 @@ void StatusHandlerTemporaryPanel::reportFatalError(const std::wstring& msg)
 Statistics::ErrorStats StatusHandlerTemporaryPanel::getErrorStats() const
 {
     //errorLog_ is an "append only" structure, so we can make getErrorStats() complexity "constant time":
-    std::for_each(errorLog_.begin() + errorStatsRowsChecked_, errorLog_.end(), [&](const LogEntry& entry)
-    {
+    for (const LogEntry& entry : std::span(errorLog_.begin() + errorStatsRowsChecked_, errorLog_.end()))
         switch (entry.type)
         {
             case MSG_TYPE_INFO:
@@ -331,7 +332,6 @@ Statistics::ErrorStats StatusHandlerTemporaryPanel::getErrorStats() const
                 ++errorStatsBuf_.errorCount;
                 break;
         }
-    });
     errorStatsRowsChecked_ = errorLog_.size();
 
     return errorStatsBuf_;
@@ -373,7 +373,7 @@ StatusHandlerFloatingDialog::StatusHandlerFloatingDialog(wxFrame* parentDlg,
                                                          std::chrono::seconds autoRetryDelay,
                                                          const Zstring& soundFileSyncComplete,
                                                          const Zstring& soundFileAlertPending,
-                                                         const WindowLayout::Dimensions& dim,
+                                                         const WindowLayout::Rect& dlgRect,
                                                          bool autoCloseDialog) :
     jobNames_(jobNames),
     startTime_(startTime),
@@ -383,7 +383,7 @@ StatusHandlerFloatingDialog::StatusHandlerFloatingDialog(wxFrame* parentDlg,
     soundFileAlertPending_(soundFileAlertPending)
 {
     //set *after* initializer list => callbacks during construction to getErrorStats()!
-    progressDlg_ = SyncProgressDialog::create(dim, [this] { userRequestCancel(); }, *this, parentDlg, true /*showProgress*/, autoCloseDialog,
+    progressDlg_ = SyncProgressDialog::create(dlgRect, [this] { userRequestCancel(); }, *this, parentDlg, true /*showProgress*/, autoCloseDialog,
                                               jobNames, std::chrono::system_clock::to_time_t(startTime), ignoreErrors, autoRetryCount, PostSyncAction::none);
 }
 
@@ -508,11 +508,12 @@ StatusHandlerFloatingDialog::DlgOptions StatusHandlerFloatingDialog::showResult(
     if (!taskCancelled() && !suspend && !autoClose && //only play when actually showing results dialog
         !soundFileSyncComplete_.empty())
     {
-        //wxWidgets shows modal error dialog by default => "no, wxWidgets, NO!"
-        wxLog* oldLogTarget = wxLog::SetActiveTarget(new wxLogStderr); //transfer and receive ownership!
-        ZEN_ON_SCOPE_EXIT(delete wxLog::SetActiveTarget(oldLogTarget));
+        wxLogCollector soundLog; //wxWidgets shows modal error dialog by default => "no, wxWidgets, NO!"
 
         wxSound::Play(utfTo<wxString>(soundFileSyncComplete_), wxSOUND_ASYNC);
+
+        if (!soundLog.GetMessages().empty())
+            logMsg(errorLog_.ref(), utfTo<std::wstring>(soundLog.GetMessages()), MSG_TYPE_INFO);
     }
     //if (::GetForegroundWindow() != GetHWND())
     //    RequestUserAttention(); -> probably too much since task bar is already colorized with Taskbar::Status::error or Status::normal
@@ -678,8 +679,7 @@ void StatusHandlerFloatingDialog::reportFatalError(const std::wstring& msg)
 Statistics::ErrorStats StatusHandlerFloatingDialog::getErrorStats() const
 {
     //errorLog_ is an "append only" structure, so we can make getErrorStats() complexity "constant time":
-    std::for_each(errorLog_.ref().begin() + errorStatsRowsChecked_, errorLog_.ref().end(), [&](const LogEntry& entry)
-    {
+    for (const LogEntry& entry : std::span(errorLog_.ref().begin() + errorStatsRowsChecked_, errorLog_.ref().end()))
         switch (entry.type)
         {
             case MSG_TYPE_INFO:
@@ -691,7 +691,6 @@ Statistics::ErrorStats StatusHandlerFloatingDialog::getErrorStats() const
                 ++errorStatsBuf_.errorCount;
                 break;
         }
-    });
     errorStatsRowsChecked_ = errorLog_.ref().size();
 
     return errorStatsBuf_;

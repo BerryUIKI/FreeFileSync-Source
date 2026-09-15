@@ -3,12 +3,9 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef RETURN_CODES_H_81307482137054156
-#define RETURN_CODES_H_81307482137054156
+#pragma once
 
 #include <zen/i18n.h>
-
 
 namespace fff
 {
@@ -53,5 +50,3 @@ std::wstring getSyncResultLabel(TaskResult syncResult)
     return std::wstring();
 }
 }
-
-#endif //RETURN_CODES_H_81307482137054156

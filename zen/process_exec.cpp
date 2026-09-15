@@ -19,18 +19,29 @@ using namespace zen;
 Zstring zen::escapeCommandArg(const Zstring& arg)
 {
     Zstring output;
+    bool addQuotes = false;
+
     for (const char c : arg)
+    {
         switch (c)
         {
-            //case  ' ': output += "\\ "; break; -> maybe nicer to use quotes instead?
-            case  '"': output += "\\\""; break; //Windows: not needed; " cannot be used as file name
-            case '\\': output += "\\\\"; break; //Windows: path separator! => don't escape
-            case '`':  output += "\\`";  break; //yes, used in some paths => Windows: no escaping required
-            default:   output += c; break;
-        }
-    if (contains(arg, ' '))
-        output = '"' + output + '"'; //caveat: single-quotes not working on macOS if string contains escaped chars! no such issue on Linux
+            case '"':  //
+            case '\\': //must be escaped - no matter if string is double-quoted or not
+            case '`':  //
+            case '$':  //
+                output += '\\';
+                break;
 
+            default:
+                if (contains(" '&*()|;<>#~", c)) //must *either* be escaped or protected by double-quotes, never both!
+                    addQuotes = true;
+                break;
+        }
+        output += c;
+    }
+
+    if (addQuotes)
+        return '"' + output + '"'; //caveat: single-quotes not working on macOS if string contains escaped chars! no such issue on Linux
     return output;
 }
 
@@ -114,6 +125,12 @@ std::pair<int /*exit code*/, std::string> processExecuteImpl(const Zstring& file
             //*leak* the fd and have it closed automatically on child process exit after execv()
             if (::dup(fdLifeSignW) == -1) //O_CLOEXEC does NOT propagate with dup()
                 THROW_LAST_SYS_ERROR("dup(fdLifeSignW)");
+
+            if (char* dirPath = ::getcwd(nullptr, 0))
+                ::free(dirPath);
+            else //avoid "sh: 0: getcwd() failed: No such file or directory" streamed to stderr if working directory doesn't exist (anymore)
+                if (::chdir("/") != 0)
+                    THROW_LAST_SYS_ERROR("chdir(/)");
 
             std::vector<const char*> argv{filePath.c_str()};
             for (const Zstring& arg : arguments)
@@ -240,9 +257,9 @@ void zen::openWithDefaultApp(const Zstring& itemPath) //throw FileError
     try
     {
         std::optional<int> timeoutMs;
-        const Zstring cmdTemplate = R"(xdg-open "%x")"; //*might* block!
+        const Zstring cmdTemplate = "xdg-open %x"; //*might* block!
         timeoutMs = 0; //e.g. on Lubuntu if Firefox is started and not already running => no need for time out! https://freefilesync.org/forum/viewtopic.php?t=8260
-        const Zstring cmdLine = replaceCpy(cmdTemplate, Zstr("%x"), itemPath);
+        const Zstring cmdLine = replaceCpy(cmdTemplate, Zstr("%x"), escapeCommandArg(itemPath));
 
         if (const auto& [exitCode, output] = consoleExecute(cmdLine, timeoutMs); //throw SysError, SysErrorTimeOut
             exitCode != 0)

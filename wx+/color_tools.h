@@ -3,13 +3,10 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef COLOR_TOOLS_H_18301239864123785613
-#define COLOR_TOOLS_H_18301239864123785613
+#pragma once
 
 #include <zen/basic_math.h>
 #include <wx/colour.h>
-
 
 namespace zen
 {
@@ -32,7 +29,7 @@ unsigned char srgbEncode(double c)
 inline //https://www.w3.org/WAI/GL/wiki/Relative_luminance
 double relLuminance(double r, double g, double b) //input: gamma-decoded sRGB
 {
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b; //= the Y part of CIEXYZ
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b; //= the Y part of CIE XYZ
 }
 
 
@@ -69,7 +66,7 @@ wxColor enhanceContrast(wxColor col1, const wxColor& col2, double contrastRatioM
     if (col2.Alpha() != wxALPHA_OPAQUE)
         return *wxRED; //make some noise
 
-    /*  Caveat: macOS uses partially-transparent colors! e.g. in #RGBA:
+    /*  CAVEAT: macOS uses partially-transparent colors! e.g. in #RGBA:
         wxSYS_COLOUR_GRAYTEXT   #FFFFFF3F
         wxSYS_COLOUR_WINDOWTEXT #FFFFFFD8
         wxSYS_COLOUR_WINDOW     #171717FF      */
@@ -126,7 +123,7 @@ wxColor enhanceContrast(wxColor col1, const wxColor& col2, double contrastRatioM
 }
 
 #if 0
-//toy sample code: gamma-encoded sRGB -> CIEXYZ -> CIELAB and back: input === output RGB color (verified)
+//toy sample code: gamma-encoded sRGB -> CIE XYZ -> CIE LAB and back: input === output RGB color (verified)
 wxColor colorConversion(const wxColor& col)
 {
     assert(col.GetAlpha() == wxALPHA_OPAQUE);
@@ -215,5 +212,3 @@ wxColor hsvColor(double h, double s, double v) //h within [0, 360), s, v within 
 }
 #endif
 }
-
-#endif //COLOR_TOOLS_H_18301239864123785613

@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef FOLDER_SELECTOR2_H_073246031245342566
-#define FOLDER_SELECTOR2_H_073246031245342566
+#pragma once
 
 #include <wx/stattext.h>
 #include <wx/button.h>
@@ -48,5 +46,3 @@ private:
     wxStaticText* staticText_ = nullptr; //optional
 };
 }
-
-#endif //FOLDER_SELECTOR2_H_073246031245342566

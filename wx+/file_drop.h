@@ -3,15 +3,12 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef FILE_DROP_H_09457802957842560325626
-#define FILE_DROP_H_09457802957842560325626
+#pragma once
 
 #include <vector>
 #include <zen/zstring.h>
 #include <wx/window.h>
 #include <wx/event.h>
-
 
 namespace zen
 {
@@ -41,5 +38,3 @@ struct FileDropEvent : public wxEvent
 
 void setupFileDrop(wxWindow& dropWindow);
 }
-
-#endif //FILE_DROP_H_09457802957842560325626

@@ -21,15 +21,15 @@ std::wstring getZlibErrorLiteral(int sc)
 {
     switch (sc)
     {
-            ZEN_CHECK_CASE_FOR_CONSTANT(Z_NEED_DICT);
-            ZEN_CHECK_CASE_FOR_CONSTANT(Z_STREAM_END);
-            ZEN_CHECK_CASE_FOR_CONSTANT(Z_OK);
-            ZEN_CHECK_CASE_FOR_CONSTANT(Z_ERRNO);
-            ZEN_CHECK_CASE_FOR_CONSTANT(Z_STREAM_ERROR);
-            ZEN_CHECK_CASE_FOR_CONSTANT(Z_DATA_ERROR);
-            ZEN_CHECK_CASE_FOR_CONSTANT(Z_MEM_ERROR);
-            ZEN_CHECK_CASE_FOR_CONSTANT(Z_BUF_ERROR);
-            ZEN_CHECK_CASE_FOR_CONSTANT(Z_VERSION_ERROR);
+            ZEN_CASE_RETURN_STRING(Z_NEED_DICT);
+            ZEN_CASE_RETURN_STRING(Z_STREAM_END);
+            ZEN_CASE_RETURN_STRING(Z_OK);
+            ZEN_CASE_RETURN_STRING(Z_ERRNO);
+            ZEN_CASE_RETURN_STRING(Z_STREAM_ERROR);
+            ZEN_CASE_RETURN_STRING(Z_DATA_ERROR);
+            ZEN_CASE_RETURN_STRING(Z_MEM_ERROR);
+            ZEN_CASE_RETURN_STRING(Z_BUF_ERROR);
+            ZEN_CASE_RETURN_STRING(Z_VERSION_ERROR);
 
         default:
             return replaceCpy<std::wstring>(L"zlib error %x", L"%x", numberTo<std::wstring>(sc));
@@ -82,7 +82,7 @@ size_t zlib_decompress(const void* src, size_t srcLen, void* trg, size_t trgLen)
 
 #undef compress //mitigate zlib macro shit...
 
-std::string zen::compress(const std::string_view& stream, int level) //throw SysError
+std::string zen::compress(const std::string_view stream, int level) //throw SysError
 {
     std::string output;
     if (!stream.empty()) //don't dereference iterator into empty container!
@@ -109,7 +109,7 @@ std::string zen::compress(const std::string_view& stream, int level) //throw Sys
 }
 
 
-std::string zen::decompress(const std::string_view& stream) //throw SysError
+std::string zen::decompress(const std::string_view stream) //throw SysError
 {
     std::string output;
     if (!stream.empty()) //don't dereference iterator into empty container!
@@ -127,11 +127,11 @@ std::string zen::decompress(const std::string_view& stream) //throw SysError
 
         try
         {
-            output.resize(static_cast<size_t>(uncompressedSize)); //throw std::bad_alloc
+            output.resize(static_cast<size_t>(uncompressedSize)); //throw std::bad_alloc, std::length_error
         }
         //most likely this is due to data corruption:
-        catch (const std::length_error& e) { throw SysError(L"zlib error: " + _("Out of memory.") + L' ' + utfTo<std::wstring>(e.what())); }
         catch (const    std::bad_alloc& e) { throw SysError(L"zlib error: " + _("Out of memory.") + L' ' + utfTo<std::wstring>(e.what())); }
+        catch (const std::length_error& e) { throw SysError(L"zlib error: " + _("Out of memory.") + L' ' + utfTo<std::wstring>(e.what())); }
 
         const size_t bytesWritten = zlib_decompress(stream.data() + sizeof(uncompressedSize),
                                                     stream.size() - sizeof(uncompressedSize),
@@ -159,7 +159,7 @@ public:
         static_assert(memLevel <= MAX_MEM_LEVEL);
 
         const int rv = ::deflateInit2(&gzipStream_,          //z_streamp strm
-                                      3 /*see db_file.cpp*/, //int level
+                                      4 /*see db_file.cpp*/, //int level
                                       Z_DEFLATED,            //int method
                                       windowBits,            //int windowBits
                                       memLevel,              //int memLevel
@@ -226,7 +226,7 @@ size_t InputStreamAsGzip::getBlockSize() const { return pimpl_->getBlockSize(); 
 size_t InputStreamAsGzip::read(void* buffer, size_t bytesToRead) { return pimpl_->read(buffer, bytesToRead); } //throw SysError, X
 
 
-std::string zen::compressAsGzip(const std::string_view& stream) //throw SysError
+std::string zen::compressAsGzip(const std::string_view stream) //throw SysError
 {
     MemoryStreamIn memStream(stream);
 

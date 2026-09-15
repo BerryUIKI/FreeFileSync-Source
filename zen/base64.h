@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef BASE64_H_08473021856321840873021487213453214
-#define BASE64_H_08473021856321840873021487213453214
+#pragma once
 
 #include <cassert>
 #include <iterator>
 #include "type_traits.h"
-
 
 namespace zen
 {
@@ -28,8 +25,8 @@ OutputIterator encodeBase64(InputIterator first, InputIterator last, OutputItera
 template <class InputIterator, class OutputIterator>
 OutputIterator decodeBase64(InputIterator first, InputIterator last, OutputIterator result); //nothrow!
 
-std::string stringEncodeBase64(const std::string_view& str);
-std::string stringDecodeBase64(const std::string_view& str);
+std::string stringEncodeBase64(const std::string_view str);
+std::string stringDecodeBase64(const std::string_view str);
 
 
 
@@ -107,7 +104,7 @@ OutputIterator decodeBase64(InputIterator first, InputIterator last, OutputItera
 
     const unsigned char INDEX_END = INDEX_PAD + 1;
 
-    auto readIndex = [&]() -> unsigned char //return index within [0, 64] or INDEX_END if end of input
+    auto readIndex = [&] -> unsigned char //return index within [0, 64] or INDEX_END if end of input
     {
         for (;;)
         {
@@ -156,7 +153,7 @@ OutputIterator decodeBase64(InputIterator first, InputIterator last, OutputItera
 
 
 inline
-std::string stringEncodeBase64(const std::string_view& str)
+std::string stringEncodeBase64(const std::string_view str)
 {
     std::string out;
     encodeBase64(str.begin(), str.end(), std::back_inserter(out));
@@ -165,12 +162,10 @@ std::string stringEncodeBase64(const std::string_view& str)
 
 
 inline
-std::string stringDecodeBase64(const std::string_view& str)
+std::string stringDecodeBase64(const std::string_view str)
 {
     std::string out;
     decodeBase64(str.begin(), str.end(), std::back_inserter(out));
     return out;
 }
 }
-
-#endif //BASE64_H_08473021856321840873021487213453214

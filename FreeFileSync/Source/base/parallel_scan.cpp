@@ -136,7 +136,7 @@ public:
 
     void notifyTaskBegin(int threadIdx, size_t parallelOps)
     {
-        assert(!zen::runningOnMainThread());
+        assert(!runningOnMainThread());
         std::lock_guard dummy(lockCurrentStatus_);
 
         [[maybe_unused]] const auto [it, inserted] = activeThreadIdxs_.emplace(threadIdx, parallelOps);
@@ -147,7 +147,7 @@ public:
 
     void notifyTaskEnd(int threadIdx)
     {
-        assert(!zen::runningOnMainThread());
+        assert(!runningOnMainThread());
         {
             std::lock_guard dummy(lockCurrentStatus_);
 
@@ -440,7 +440,7 @@ std::map<DirectoryKey, DirectoryValue> fff::parallelFolderScan(const std::set<Di
         for (const DirectoryKey& key : dirKeys)
             workload.emplace(key, &output[key]); //=> DirectoryValue* unshared for lock-free worker-thread access
 
-        worker.emplace_back([afsDevice /*clang bug*/= afsDevice, workload, threadIdx, &acb, parallelOps, threadName = std::move(threadName)]() mutable
+        worker.emplace_back([afsDevice, workload, threadIdx, &acb, parallelOps, threadName = std::move(threadName)] mutable
         {
             setCurrentThreadName(threadName);
 

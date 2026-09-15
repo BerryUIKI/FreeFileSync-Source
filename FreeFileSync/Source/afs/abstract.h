@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef ABSTRACT_H_873450978453042524534234
-#define ABSTRACT_H_873450978453042524534234
+#pragma once
 
 #include <functional>
 #include <chrono>
@@ -13,7 +11,6 @@
 #include <zen/file_path.h>
 #include <zen/serialize.h> //InputStream/OutputStream support buffered stream concept
 #include <wx+/image_holder.h> //NOT a wxWidgets dependency!
-
 
 namespace fff
 {
@@ -280,7 +277,7 @@ struct AbstractFileSystem //THREAD-SAFETY: "const" member functions must model t
     //symlink handling: follow
     //already existing + no onDeleteTargetFile: undefined behavior! (e.g. fail/overwrite/auto-rename)
     //returns current attributes at the time of copy
-    static FileCopyResult copyFileTransactional(const AbstractPath& sourcePath, const StreamAttributes& attrSource, //throw FileError, ErrorFileLocked, X
+    static FileCopyResult copyFileTransactional(const AbstractPath& sourcePath, const StreamAttributes& sourceAttr, //throw FileError, ErrorFileLocked, X
                                                 const AbstractPath& targetPath,
                                                 bool copyFilePermissions,
                                                 bool transactionalCopy,
@@ -345,7 +342,7 @@ protected:
                         const std::function<void(const SymlinkInfo& si)>& onSymlink) const; //
 
     //already existing: undefined behavior! (e.g. fail/overwrite/auto-rename)
-    FileCopyResult copyFileAsStream(const AfsPath& sourcePath, const StreamAttributes& attrSource, //throw FileError, ErrorFileLocked, X
+    FileCopyResult copyFileAsStream(const AfsPath& sourcePath, const StreamAttributes& sourceAttr, //throw FileError, ErrorFileLocked, X
                                     const AbstractPath& targetPath, const zen::IoCallback& notifyUnbufferedIO /*throw X*/) const;
 
 
@@ -412,7 +409,7 @@ private:
 
     //symlink handling: follow
     //already existing: undefined behavior! (e.g. fail/overwrite/auto-rename)
-    virtual FileCopyResult copyFileForSameAfsType(const AfsPath& sourcePath, const StreamAttributes& attrSource, //throw FileError, ErrorFileLocked, X
+    virtual FileCopyResult copyFileForSameAfsType(const AfsPath& sourcePath, const StreamAttributes& sourceAttr, //throw FileError, ErrorFileLocked, X
                                                   const AbstractPath& targetPath, bool copyFilePermissions,
                                                   //accummulated delta != file size! consider ADS, sparse, compressed files
                                                   const zen::IoCallback& notifyUnbufferedIO /*throw X*/) const = 0;
@@ -576,5 +573,3 @@ void AbstractFileSystem::copySymlink(const AbstractPath& sourcePath, const Abstr
     sourcePath.afsDevice.ref().copySymlinkForSameAfsType(sourcePath.afsPath, targetPath, copyFilePermissions); //throw FileError
 }
 }
-
-#endif //ABSTRACT_H_873450978453042524534234

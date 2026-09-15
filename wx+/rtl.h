@@ -3,15 +3,12 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef RTL_H_0183487180058718273432148
-#define RTL_H_0183487180058718273432148
+#pragma once
 
 #include <wx/dcmemory.h>
 #include <wx/image.h>
 #include <wx/app.h>
 #include "dc.h"
-
 
 namespace zen
 {
@@ -51,7 +48,7 @@ void drawBitmapAligned(wxDC& dc, const wxImage& img, const wxRect& rect, int ali
     else if (alignment & wxALIGN_CENTER_VERTICAL)
         pt.y += (rect.height - screenToWxsize(img.GetHeight())) / 2;
 
-    dc.DrawBitmap(toScaledBitmap(img), pt);
+    dc.DrawBitmap(toDpiScaledBitmap(img), pt);
 }
 }
 
@@ -108,5 +105,3 @@ wxImage mirrorIfRtl(const wxImage& img)
         return img;
 }
 }
-
-#endif //RTL_H_0183487180058718273432148

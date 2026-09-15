@@ -1,62 +1,147 @@
 # FreeFileSync
 
-[English](README.md) | [Deutsch German](README_DE.md) | [简体中文 Simplified Chinese](README_zh-CN.md) | [日本語 Japanese](README.md)
- 
+[English](README.md) | [Deutsch](README_DE.md) | [简体中文](README_zh-CN.md) | [日本語](README_JP.md)
 
-## 紹介
-FreeFileSyncは、ファイルの同期とバックアップソリューションに焦点を当てた包括的で強力なオープンソースプロジェクトです。異なるストレージ場所間でファイルを効率的かつ信頼性の高い方法で同期し、データの一貫性と整合性を保つことをユーザーに提供することを目的としています。
+[![Version](https://img.shields.io/badge/version-14.12-blue.svg)](https://freefilesync.org)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://freefilesync.org/download.php)
+[![C++ Standard](https://img.shields.io/badge/C%2B%2B-23-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B23)
 
-## 公式ウェブサイト
-FreeFileSyncの公式ウェブサイトはhttps://freefilesync.orgです。このウェブサイトを訪問することで、プロジェクトに関する最新情報を得たり、ソフトウェアの最新バージョンをダウンロードしたり、ドキュメント、チュートリアル、コミュニティサポートなどの追加リソースにアクセスしたりすることができます。
+## はじめに
 
-## ファイルとフォルダの同期
-主な機能FreeFileSyncは、すべての重要なファイルのバックアップコピーを作成および管理するフォルダ比較および同期ソフトウェアです。毎回すべてのファイルをコピーするのではなく、FreeFileSyncはソースフォルダとターゲットフォルダの差分を判定し、必要な最小限のデータのみを転送します。FreeFileSyncはオープンソースソフトウェアで、Windows、macOS、Linuxで利用可能です。
+**FreeFileSync** は、重要なファイルのバックアップと同期を行うための、無料でオープンソースのフォルダ比較・同期ソフトウェアです。毎回すべてのファイルをコピーするのではなく、ソースフォルダとターゲットフォルダの差分を検出し、必要な最小限のデータのみを転送します。
 
-## 機能
-- **クロスプラットフォーム互換性**：FreeFileSync-Sourceは、Windows、Linux、macOSなど、複数のオペレーティングシステム上でシームレスに動作するように設計されています。これにより、ユーザーは異なるプラットフォーム間でファイルを問題なく同期できます。
-- **柔軟な同期モード**：さまざまな同期モードを提供し、異なるユーザーニーズに対応しています。片方向同期、双方向同期、ミラー同期を行いたい場合でも、FreeFileSync-Sourceが対応しています。
-- **使いやすいインターフェース**：このプロジェクトには、直感的で使いやすいグラフィカルユーザーインターフェース（GUI）が備わっており、ユーザーが同期タスクを設定し、スケジュールを設定し、ファイル転送の進捗を監視するのを簡単にします。
-- **高度なフィルタリングオプション**：同期プロセスから特定のファイルやディレクトリを含めるか除外するかを定義する特定のルールとフィルタを設定できます。これにより、何を同期するか、何を同期しないかを細かく制御できます。
-- **インクリメンタル同期**：FreeFileSync-Sourceはインクリメンタル同期技術を使用して、データ転送を最小限に抑え、同期にかかる時間を短縮します。前回の同期以降に行われた変更のみが転送されるため、帯域幅を節約し、パフォーマンスが向上します。
+FreeFileSync はクロスプラットフォーム対応で、**Windows**、**macOS**、**Linux** で動作します。また、フォルダをリアルタイムに監視して変更検知時に同期を自動実行するツール **RealTimeSync** も同梱されています。
 
-## インストール
-### 前提条件
-- [FreeFileSync-Sourceを使用する前にインストールする必要のあるソフトウェアやライブラリを列挙します。例：特定バージョンのコンパイラやランタイム環境など。]
+- **公式ウェブサイト**: [https://freefilesync.org](https://freefilesync.org)
+- **公式ダウンロード**: [https://freefilesync.org/download.php](https://freefilesync.org/download.php)
+- **ソースリポジトリ**: [https://github.com/BerryUIKI/FreeFileSync-Source](https://github.com/BerryUIKI/FreeFileSync-Source)
 
-### 手順
-1. **ソースコードのダウンロード**：FreeFileSync-Sourceのソースコードを公式リポジトリからダウンロードできます[ここにリポジトリのリンクを記載してください]。
-2. **コードのコンパイル**：
-   - ダウンロードしたソースコードのディレクトリに移動します。
-   - ソースコードに含まれる`README`または`INSTALL`ファイルに記載されているコンパイル手順に従います。これには、`make`や`CMake`などのビルドツールを使用して特定のコマンドを実行することが含まれる場合があります。
-3. **アプリケーションのインストール**：
-   - コンパイルが成功したら、適切なインストールスクリプトを実行するか、プラットフォーム固有のインストール手順に従ってアプリケーションをインストールできます。
+---
+
+## 主な機能
+
+- **クロスプラットフォーム互換性**: Windows、macOS、Linux でネイティブに動作します。
+- **柔軟な同期モード**: 双方向同期（Two-way）、ミラー同期（Mirror）、更新同期（Update）、およびカスタム同期に対応。
+- **多彩なプロトコル対応**: ローカルディスク、ネットワーク共有（SMB）、SFTP（SSHファイル転送）、FTP/FTPS、Google Drive との同期をサポート。
+- **高速なスキャン性能**: マルチスレッドによるディレクトリ走査と最適化されたバイナリデータベースによる差分管理。
+- **競合およびエラー処理**: 確実な競合検出と解決、自動リトライ、フェイルセーフなファイルコピー。
+- **自動化とリアルタイム監視**: コマンドラインによるバッチ処理と、RealTimeSync による自動フォルダ監視。
+- **高度なフィルタリング**: ワイルドカード、更新日時、ファイルサイズ、正規表現による除外/包含ルール。
+- **データ保護**: バージョニング機能（変更前・削除前ファイルを指定フォルダやごみ箱に退避）。
+
+---
+
+## ソースコードからのビルド
+
+### 必要環境
+
+FreeFileSync のビルドには C++23 対応のコンパイラと各種開発ライブラリが必要です：
+
+- **コンパイラ**: C++23 (`-std=c++23`) をサポートする GCC 13+ または Clang 17+
+- **wxWidgets**: バージョン 3.2 以降（`wx-config`、`std`, `aui`, `richtext` コンポーネント）
+- **GTK+**: GTK 3.0 開発ヘッダー（`gtk+-3.0`）
+- **ネットワーク & 暗号化ライブラリ**:
+  - OpenSSL (`openssl`)
+  - libcurl (`libcurl`)
+  - libssh2 (`libssh2`)
+  - libidn2 (`libidn2`)
+- **圧縮ライブラリ**: zlib
+- **SELinux** *(オプション)*: `libselinux`
+
+#### Linux (Debian / Ubuntu) での依存関係インストール
+
+```bash
+sudo apt update
+sudo apt install build-essential \
+    libwxgtk3.2-dev \
+    libgtk-3-dev \
+    libcurl4-openssl-dev \
+    libssh2-1-dev \
+    libssl-dev \
+    libidn2-dev \
+    zlib1g-dev
+```
+
+*(Fedora / RHEL):*
+```bash
+sudo dnf install gcc-c++ wxGTK3-devel gtk3-devel libcurl-devel libssh2-devel openssl-devel libidn2-devel zlib-devel
+```
+
+### ビルド手順
+
+1. **リポジトリをクローン**:
+   ```bash
+   git clone https://github.com/BerryUIKI/FreeFileSync-Source.git
+   cd FreeFileSync-Source
+   ```
+
+2. **FreeFileSync をビルド**:
+   ```bash
+   cd FreeFileSync/Source
+   make -j$(nproc)
+   ```
+
+3. **RealTimeSync をビルド** *(オプション)*:
+   ```bash
+   cd RealTimeSync
+   make -j$(nproc)
+   ```
+
+ビルドが完了すると、各ディレクトリに対応する実行ファイルが生成されます。
+
+---
 
 ## 使い方
-### 同期タスクの設定
-1. Launch FreeFileSync-Source.
-2. Click on the "New" button to create a new synchronization task.
-3. In the task configuration window, specify the source and destination folders for the synchronization.
-4. Choose the desired synchronization mode and configure any additional options, such as filtering rules or scheduling settings.
-5. Click "OK" to save the task configuration.
 
-### Running a Synchronization Task
-1. Select the synchronization task you want to run from the task list.
-2. Click on the "Run" button to start the synchronization process.
-3. Monitor the progress of the sync in the status window.
+### GUI（グラフィカル操作）
+1. `FreeFileSync` を起動します。
+2. 左右のフォルダ欄に同期元のフォルダと同期先のフォルダを指定（またはドラッグ＆ドロップ）します。
+3. 比較方法（ファイル日時とサイズ、内容、ファイルサイズ）および同期設定（双方向、ミラー、更新、カスタム）を選択します。
+4. **比較** ボタンをクリックして差分を確認し、**同期処理** ボタンをクリックして同期を開始します。
 
-## Contributing
-We welcome contributions from the open-source community to help improve FreeFileSync-Source. If you would like to contribute, please follow these steps:
-1. Fork the repository on GitHub.
-2. Create a new branch for your feature or bug fix.
-3. Make your changes and commit them with descriptive commit messages.
-4. Push your changes to your forked repository.
-5. Submit a pull request to the main repository, explaining the purpose and details of your changes.
+### RealTimeSync によるリアルタイム監視
+1. `RealTimeSync` を起動します。
+2. 監視対象のフォルダパスとアイドル待機時間を指定します。
+3. 変更検出時に実行するコマンド（保存済みのバッチ設定 `.ffs_batch` の実行）を設定します。
+4. **開始** をクリックするとタスクトレイに常駐し、監視を開始します。
 
-## License
-FreeFileSync-Source is licensed under the [License Name] license. Please see the `LICENSE` file included in the source code for more details.
+---
 
-## Support
-If you encounter any issues or have any questions regarding FreeFileSync-Source, please feel free to open an issue on the GitHub repository or contact our support team at [support email address].
+## コントリビューション
 
-## Acknowledgments
-We would like to thank all the contributors and users of FreeFileSync-Source for their support and feedback. Your contributions help make this project better.
+オープンソースコミュニティからの貢献を歓迎します：
+
+1. リポジトリをフォークします: [https://github.com/BerryUIKI/FreeFileSync-Source](https://github.com/BerryUIKI/FreeFileSync-Source)
+2. トピックブランチを作成します（`git checkout -b feature/my-feature`）。
+3. 変更を加え、わかりやすいコミットメッセージでコミットします。
+4. フォーク先のリポジトリへプッシュします（`git push origin feature/my-feature`）。
+5. メインリポジトリへ Pull Request を送信します。
+
+---
+
+## ライセンス
+
+FreeFileSync は個人・非商用目的において **GNU General Public License v3.0 (GPLv3)** に基づいて配布されています。商用および公的機関等での利用には FreeFileSync Business Edition の購入が必要です。
+
+ライセンスの全条項については [LICENSE](LICENSE) および [License.txt](License.txt) をご参照ください。付属する外部ライブラリのライセンスは以下のとおりです：
+- **wxWidgets**: wxWindows Library Licence 3.1
+- **OpenSSL**: OpenSSL License / SSLeay License
+- **libcurl**: curl License (MIT スタイル)
+- **libssh2**: libssh2 License (BSD 3-Clause)
+- **PuTTY**: PuTTY Licence (MIT スタイル)
+
+---
+
+## サポートとリソース
+
+- **公式フォーラム**: [https://freefilesync.org/forum/](https://freefilesync.org/forum/)
+- **よくある質問 (FAQ)**: [https://freefilesync.org/faq.php](https://freefilesync.org/faq.php)
+- **マニュアル & チュートリアル**: [https://freefilesync.org/manual.php](https://freefilesync.org/manual.php)
+- **リポジトリ Issues**: [https://github.com/BerryUIKI/FreeFileSync-Source/issues](https://github.com/BerryUIKI/FreeFileSync-Source/issues)
+
+---
+
+## 謝辞
+
+FreeFileSync を開発・保守されている Zenju 氏およびコミュニティの皆様、翻訳者、コントリビューター、すべてのユーザーに感謝いたします。

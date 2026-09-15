@@ -3,16 +3,13 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef STATUS_HANDLER_IMPL_H_07682758976
-#define STATUS_HANDLER_IMPL_H_07682758976
+#pragma once
 
 #include <zen/basic_math.h>
 #include <zen/file_error.h>
 #include <zen/thread.h>
 #include "process_callback.h"
 #include "speed_test.h"
-
 
 namespace fff
 {
@@ -47,8 +44,8 @@ public:
     }
 
     //blocking call: context of worker thread
-    //=> indirect support for "pause": logInfo() is called under singleThread lock,
-    //   so all other worker threads will wait when coming out of parallel I/O (trying to lock singleThread)
+    //=> indirect support for "pause": logInfo() is called under "singleThread" lock,
+    //   so all other worker threads will wait when coming out of parallel I/O (trying to lock "singleThread")
     void logMessage(const std::wstring& msg, PhaseCallback::MsgType type) //throw ThreadStopRequest
     {
         assert(!zen::runningOnMainThread());
@@ -371,7 +368,8 @@ using AsyncItemStatReporter = ItemStatReporter<AsyncCallback>;
 
 constexpr std::chrono::seconds STATUS_PERCENT_DELAY(2);
 constexpr std::chrono::seconds STATUS_PERCENT_MIN_DURATION(3);
-const int                      STATUS_PERCENT_MIN_CHANGES_PER_SEC = 2;
+const double                   STATUS_PERCENT_MIN_CHANGES_PER_SEC = 1.2;
+const double                   STATUS_PERCENT_HYSTERESIS_FACTOR = 0.1;
 constexpr std::chrono::seconds STATUS_PERCENT_SPEED_WINDOW(10);
 
 template <class Callback>
@@ -393,31 +391,26 @@ struct PercentStatReporter
         {
             lastUpdate_ = now;
 
-            if (!showPercent_ && bytesCopied_ > 0)
+            if (startTime_ == std::chrono::steady_clock::time_point())
             {
-                if (startTime_ == std::chrono::steady_clock::time_point())
-                {
-                    startTime_ = now; //get higher-quality perf stats when starting timing here rather than constructor!?
-                    speedTest_.addSample(std::chrono::seconds(0), 0 /*itemsCurrent*/, bytesCopied_);
-                }
-                else if (const std::chrono::nanoseconds elapsed = now - startTime_;
-                         elapsed >= STATUS_PERCENT_DELAY)
-                {
-                    speedTest_.addSample(elapsed, 0 /*itemsCurrent*/, bytesCopied_);
-
-                    if (const std::optional<double> remSecs = speedTest_.getRemainingSec(0 /*itemsRemaining*/, bytesExpected_ - bytesCopied_))
-                        if (*remSecs > std::chrono::duration<double>(STATUS_PERCENT_MIN_DURATION).count())
-                        {
-                            showPercent_ = true;
-                            speedTest_.clear(); //discard (probably messy) numbers
-                        }
-                }
+                if (bytesCopied_ == 0)
+                    return;
+                startTime_ = now; //get higher-quality perf stats when starting timing here rather than constructor!?
             }
+
+            const std::chrono::nanoseconds elapsed = now - startTime_;
+            speedTest_.addSample(elapsed, 0 /*itemsCurrent*/, bytesCopied_);
+
+            if (!showPercent_ && elapsed >= STATUS_PERCENT_DELAY)
+                if (const std::optional<double> remSecs = speedTest_.getRemainingSec(0 /*itemsRemaining*/, bytesExpected_ - bytesCopied_))
+                    if (std::chrono::duration<double>(*remSecs) > STATUS_PERCENT_MIN_DURATION)
+                    {
+                        showPercent_ = true;
+                        speedTest_.clear(); //discard (probably messy) numbers
+                    }
             if (showPercent_)
             {
-                speedTest_.addSample(now - startTime_, 0 /*itemsCurrent*/, bytesCopied_);
                 const std::optional<double> bps = speedTest_.getBytesPerSec();
-
                 statReporter_.updateStatus(msgPrefix_ + formatPercent(std::min(static_cast<double>(bytesCopied_) / bytesExpected_, 1.0), //> 100% possible! see process_callback.h notes
                                                                       bps ? *bps : 0, bytesExpected_)); //throw X
             }
@@ -425,19 +418,25 @@ struct PercentStatReporter
     }
 
 private:
-    static std::wstring formatPercent(double fraction, double bytesPerSec, int64_t bytesTotal)
+    std::wstring formatPercent(double fraction, double bytesPerSec, int64_t bytesTotal)
     {
         const double totalSecs = numeric::isNull(bytesPerSec) ? 0 : bytesTotal / bytesPerSec;
-        const double expectedSteps = totalSecs * STATUS_PERCENT_MIN_CHANGES_PER_SEC;
+        double expectedSteps = totalSecs * STATUS_PERCENT_MIN_CHANGES_PER_SEC;
 
-        const int decPlaces = [&] //TODO? protect against format flickering!?
+        //avoid decimal places jitter
+        if (numeric::dist(expectedSteps, expectedStepsLast_) > STATUS_PERCENT_HYSTERESIS_FACTOR * expectedStepsLast_)
+            expectedStepsLast_ = expectedSteps;
+        else
+            expectedSteps = expectedStepsLast_;
+
+        const int decPlaces = [&]
         {
             if (expectedSteps <=    100) return 0;
             if (expectedSteps <=   1000) return 1;
             if (expectedSteps <=  10000) return 2;
             if (expectedSteps <= 100000) return 3;
             //return static_cast<int>(std::ceil(std::log10(expectedSteps))) - 2; -> overkill!
-            /**/                         return 4;
+            return 4;
         }();
         return zen::formatProgressPercent(fraction, decPlaces);
     }
@@ -449,6 +448,7 @@ private:
     std::chrono::steady_clock::time_point startTime_;
     std::chrono::steady_clock::time_point lastUpdate_;
     SpeedTest speedTest_{STATUS_PERCENT_SPEED_WINDOW};
+    double expectedStepsLast_ = 0;
     ItemStatReporter<Callback>& statReporter_;
 };
 
@@ -555,5 +555,3 @@ auto parallelScope(Function&& fun, std::mutex& singleThread) //throw X
     return fun(); //throw X
 }
 }
-
-#endif //STATUS_HANDLER_IMPL_H_07682758976

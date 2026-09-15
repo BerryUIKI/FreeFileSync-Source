@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef STD_BUTTON_LAYOUT_H_183470321478317214
-#define STD_BUTTON_LAYOUT_H_183470321478317214
+#pragma once
 
 #include <wx/sizer.h>
 #include <wx/button.h>
 #include "dc.h"
-
 
 namespace zen
 {
@@ -39,12 +36,11 @@ constexpr int getMenuIconDipSize()
 
 
 inline
-int getDefaultButtonHeight()
+int getIdealButtonHeight()
 {
     const int defaultHeight = wxButton::GetDefaultSize().GetHeight(); //buffered by wxWidgets
     return std::max(defaultHeight, dipToWxsize(31)); //default button height is much too small => increase!
 }
-
 
 
 
@@ -116,7 +112,7 @@ void setStandardButtonLayout(wxBoxSizer& sizer, const StdButtons& buttons)
         if (btn)
         {
             assert(btn->GetMinSize().GetHeight() == -1); //let OS or this routine do the sizing! note: OS X does not allow changing the (visible!) button height!
-            btn->SetMinSize({-1, getDefaultButtonHeight()});
+            btn->SetMinSize({-1, getIdealButtonHeight()});
 
             if (settingFirstButton)
                 settingFirstButton = false;
@@ -138,5 +134,3 @@ void setStandardButtonLayout(wxBoxSizer& sizer, const StdButtons& buttons)
     assert(buttonsTmp.btnYes || buttonsTmp.btnCancel);
 }
 }
-
-#endif //STD_BUTTON_LAYOUT_H_183470321478317214

@@ -3,15 +3,12 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef ASYNC_TASK_H_839147839170432143214321
-#define ASYNC_TASK_H_839147839170432143214321
+#pragma once
 
 #include <zen/thread.h>
 #include <zen/scope_guard.h>
 #include <zen/stl_tools.h>
 #include <wx/timer.h>
-
 
 namespace zen
 {
@@ -76,9 +73,9 @@ public:
         std::promise<ResultType> prom;
         tasks_.push_back(std::make_unique<ConcreteTask<ResultType, std::decay_t<Fun2>>>(prom.get_future(), std::forward<Fun2>(evalOnGui)));
 
-        //don't use zen::runAsync() and std::packaged_task => let exceptions crash the app directly at throw location!
-        std::thread([prom = std::move(prom),
-                     fun = std::forward<Fun>(evalAsync)]() mutable
+        //uncaught exception? => let the app crash at throw location: requires InterruptibleThread, not std::thread!
+        InterruptibleThread([prom = std::move(prom),
+                             fun = std::forward<Fun>(evalAsync)] mutable
         {
             if constexpr (std::is_same_v<ResultType, void>)
             {
@@ -158,5 +155,3 @@ private:
 };
 
 }
-
-#endif //ASYNC_TASK_H_839147839170432143214321

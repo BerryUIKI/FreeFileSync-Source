@@ -3,12 +3,9 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef SFTP_H_5392187498172458215426
-#define SFTP_H_5392187498172458215426
+#pragma once
 
 #include "abstract.h"
-
 
 namespace fff
 {
@@ -51,5 +48,3 @@ int getServerMaxChannelsPerConnection(const SftpLogin& login); //throw FileError
 
 AfsPath getSftpHomePath(const SftpLogin& login); //throw FileError
 }
-
-#endif //SFTP_H_5392187498172458215426

@@ -484,10 +484,10 @@ public:
     {
         FNV1aHash<uint64_t> pathHash;
         for (const Zstring& itemName : splitCpy<Zstring>(folder.getAbstractPath<side>().afsPath.value, FILE_NAME_SEPARATOR, SplitOnEmpty::skip))
-            hashAdd(pathHash, itemName); //not really needed ATM, but it's cleaner to hash *full* afsPath
+            hashAddName(pathHash, itemName); //not really needed ATM, but it's cleaner to hash *full* afsPath
 
         GetChildItemsHashed inst;
-        inst.recurse(folder, pathHash.get());
+        inst.recurse(folder, pathHash);
         return std::move(inst.childPathRefs_);
     }
 
@@ -497,40 +497,38 @@ private:
 
     GetChildItemsHashed() {}
 
-    void recurse(const ContainerObject& conObj, uint64_t parentPathHash)
+    void recurse(const ContainerObject& conObj, FNV1aHash<uint64_t> parentPathHash)
     {
         for (const FilePair& file : conObj.files())
-            childPathRefs_.push_back({&file, getPathHash(file, parentPathHash)});
+            childPathRefs_.push_back({&file, getPathHash(file, parentPathHash).get()});
         //S1 -> T (update)   is not a conflict (anymore) if S1, S2 contain different files
         //S2 -> T (update)   https://freefilesync.org/forum/viewtopic.php?t=9365#p36466
         for (const SymlinkPair& symlink : conObj.symlinks())
-            childPathRefs_.push_back({&symlink, getPathHash(symlink, parentPathHash)});
+            childPathRefs_.push_back({&symlink, getPathHash(symlink, parentPathHash).get()});
 
         for (const FolderPair& subFolder : conObj.subfolders())
         {
-            const uint64_t folderPathHash = getPathHash(subFolder, parentPathHash);
+            const FNV1aHash<uint64_t> folderPathHash = getPathHash(subFolder, parentPathHash);
 
-            childPathRefs_.push_back({&subFolder, folderPathHash});
+            childPathRefs_.emplace_back(&subFolder, folderPathHash.get());
 
             recurse(subFolder, folderPathHash);
         }
     }
 
-    static void hashAdd(FNV1aHash<uint64_t>& hash, const Zstring& itemName)
+    static void hashAddName(FNV1aHash<uint64_t>& hash, const Zstring& itemName)
     {
         if (isAsciiString(itemName)) //fast path: no need for extra memory allocation!
             for (const Zchar c : itemName)
                 hash.add(asciiToUpper(c));
         else
-            for (const Zchar c : getUpperCase(itemName))
-                hash.add(c);
+            hashAddBinaryString(hash, getUpperCase(itemName));
     }
 
-    static uint64_t getPathHash(const FileSystemObject& fsObj, uint64_t parentPathHash)
+    static FNV1aHash<uint64_t> getPathHash(const FileSystemObject& fsObj, FNV1aHash<uint64_t> parentPathHash)
     {
-        FNV1aHash<uint64_t> hash(parentPathHash);
-        hashAdd(hash, fsObj.getItemName<side>());
-        return hash.get();
+        hashAddName(parentPathHash, fsObj.getItemName<side>());
+        return parentPathHash;
     }
 
     std::vector<ChildPathRef> childPathRefs_;
@@ -538,7 +536,7 @@ private:
 
 
 template <SelectSide sideL, SelectSide sideR>
-std::weak_ordering compareHashedPathNoCase(const ChildPathRef& lhs, const ChildPathRef& rhs)
+std::weak_ordering comparePathNoCase(const ChildPathRef& lhs, const ChildPathRef& rhs)
 {
     //assert(lhs.fsObj->getAbstractPath<sideL>().afsDevice ==         -> too slow, even for debug build
     //       rhs.fsObj->getAbstractPath<sideR>().afsDevice);
@@ -557,7 +555,7 @@ void sortAndRemoveDuplicates(std::vector<ChildPathRef>& pathRefs)
 {
     std::sort(pathRefs.begin(), pathRefs.end(), [](const ChildPathRef& lhs, const ChildPathRef& rhs)
     {
-        if (const std::weak_ordering cmp = compareHashedPathNoCase<side, side>(lhs, rhs);
+        if (const std::weak_ordering cmp = comparePathNoCase<side, side>(lhs, rhs);
             cmp != std::weak_ordering::equivalent)
             return cmp < 0;
 
@@ -567,7 +565,7 @@ void sortAndRemoveDuplicates(std::vector<ChildPathRef>& pathRefs)
     });
 
     pathRefs.erase(std::unique(pathRefs.begin(), pathRefs.end(),
-    [](const ChildPathRef& lhs, const ChildPathRef& rhs) { return compareHashedPathNoCase<side, side>(lhs, rhs) == std::weak_ordering::equivalent; }),
+    [](const ChildPathRef& lhs, const ChildPathRef& rhs) { return comparePathNoCase<side, side>(lhs, rhs) == std::weak_ordering::equivalent; }),
     pathRefs.end());
 
     //let's not use removeDuplicates(): we rely too much on implementation details!
@@ -600,7 +598,7 @@ void checkPathRaceCondition(const BaseFolderPair& baseFolderP, const BaseFolderP
             //e.g.  C:\folder <-> C:\folder\sub    =>  find "sub" inside C:\folder
             std::vector<const ContainerObject*> childFolderP{&baseFolderP};
 
-            std::for_each(relPathC.begin() + relPathP.size(), relPathC.end(), [&](const Zstring& itemName)
+            for (const Zstring& itemName : std::span(relPathC.begin() + relPathP.size(), relPathC.end()))
             {
                 std::vector<const ContainerObject*> childFolderP2;
 
@@ -611,7 +609,7 @@ void checkPathRaceCondition(const BaseFolderPair& baseFolderP, const BaseFolderP
                 //no "break": yes, weird, but there could be more than one (for case-sensitive file system)
 
                 childFolderP = std::move(childFolderP2);
-            });
+            }
 
             std::vector<ChildPathRef> pathRefsP;
             for (const ContainerObject* childFolder : childFolderP)
@@ -639,7 +637,7 @@ void checkPathRaceCondition(const BaseFolderPair& baseFolderP, const BaseFolderP
                     pathRaceItems.push_back({rhs.fsObj, sideC});
                 }
             },
-            [](const ChildPathRef&) {} /*right only*/, compareHashedPathNoCase<sideP, sideC>);
+            [](const ChildPathRef&) {} /*right only*/, comparePathNoCase<sideP, sideC>);
         }
     }
 }
@@ -742,7 +740,7 @@ void removeFolderIfExistsRecursion(const AbstractPath& folderPath, //throw FileE
 
 
 inline
-AFS::FileCopyResult copyFileTransactional(const AbstractPath& sourcePath, const AFS::StreamAttributes& attrSource, //throw FileError, ErrorFileLocked, X
+AFS::FileCopyResult copyFileTransactional(const AbstractPath& sourcePath, const AFS::StreamAttributes& sourceAttr, //throw FileError, ErrorFileLocked, X
                                           const AbstractPath& targetPath,
                                           bool copyFilePermissions,
                                           bool transactionalCopy,
@@ -752,7 +750,7 @@ AFS::FileCopyResult copyFileTransactional(const AbstractPath& sourcePath, const 
 {
     return parallelScope([=]
     {
-        return AFS::copyFileTransactional(sourcePath, attrSource, targetPath, copyFilePermissions, transactionalCopy, onDeleteTargetFile, notifyUnbufferedIO); //throw FileError, ErrorFileLocked, X
+        return AFS::copyFileTransactional(sourcePath, sourceAttr, targetPath, copyFilePermissions, transactionalCopy, onDeleteTargetFile, notifyUnbufferedIO); //throw FileError, ErrorFileLocked, X
     }, singleThread);
 }
 
@@ -1504,7 +1502,7 @@ void FolderPairSyncer::executeFileMoveImpl(FilePair& fileFrom, FilePair& fileTo)
 
     if (fallBackCopyDelete)
     {
-        auto getStats = [&]() -> std::pair<int, int64_t>
+        auto getStats = [&] -> std::pair<int, int64_t>
         {
             SyncStatistics statSrc(fileFrom);
             SyncStatistics statTrg(fileTo);
@@ -1804,7 +1802,10 @@ void FolderPairSyncer::synchronizeFileInt(FilePair& file, SyncOperation syncOp) 
                                           false, file.isFollowedSymlink<sideSrc>());
 
                 if (result.errorModTime) //log only; no popup
-                    acb_.logMessage(result.errorModTime->toString(), PhaseCallback::MsgType::warning); //throw ThreadStopRequest
+                    acb_.logMessage(result.errorModTime->toString(),
+                                    file.base().getCompVariant() == CompareVariant::timeSize ?
+                                    PhaseCallback::MsgType::warning :
+                                    PhaseCallback::MsgType::info /*e.g. FTP server not supporting MFMT command*/); //throw ThreadStopRequest
             }
             catch (const FileError& e)
             {
@@ -1936,7 +1937,10 @@ void FolderPairSyncer::synchronizeFileInt(FilePair& file, SyncOperation syncOp) 
                                       file.isFollowedSymlink<sideSrc>());
 
             if (result.errorModTime) //log only; no popup
-                acb_.logMessage(result.errorModTime->toString(), PhaseCallback::MsgType::warning); //throw ThreadStopRequest
+                acb_.logMessage(result.errorModTime->toString(),
+                                file.base().getCompVariant() == CompareVariant::timeSize ?
+                                PhaseCallback::MsgType::warning :
+                                PhaseCallback::MsgType::info /*e.g. FTP server not supporting MFMT command*/); //throw ThreadStopRequest
         }
         break;
 
@@ -2771,14 +2775,14 @@ void fff::synchronize(const std::chrono::system_clock::time_point& syncStartTime
                                _("To avoid conflicts, set up exclude filters so that each updated file is included by only one folder pair.") + L"\n\n";
 
             auto prevItem = pathRaceItems[0];
-            std::for_each(pathRaceItems.begin(), pathRaceItems.begin() + std::min(pathRaceItems.size(), CONFLICTS_PREVIEW_MAX), [&](const PathRaceItem& item)
+            for (const PathRaceItem& item : std::span(pathRaceItems.begin(), std::min(pathRaceItems.size(), CONFLICTS_PREVIEW_MAX)))
             {
                 if (comparePathNoCase(item, prevItem) != std::weak_ordering::equivalent)
                     msg += L"\n"; //visually separate path groups
 
                 msg += formatRaceItem(item) + L"\n";
                 prevItem = item;
-            });
+            }
 
             if (pathRaceItems.size() > CONFLICTS_PREVIEW_MAX)
                 msg += L"\n[...]  " + replaceCpy(_P("Showing %y of 1 item", "Showing %y of %x items", pathRaceItems.size()), //%x used as plural form placeholder!

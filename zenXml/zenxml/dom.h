@@ -3,15 +3,12 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef DOM_H_82085720723894567204564256
-#define DOM_H_82085720723894567204564256
+#pragma once
 
 #include <string>
 #include <list>
 #include <unordered_map>
 #include "cvrt_text.h" //"readText/writeText"
-
 
 namespace zen
 {
@@ -57,13 +54,13 @@ public:
       \return "true" if value was retrieved successfully.
     */
     template <class T>
-    bool getAttribute(const std::string& name, T& value) const
+    bool getAttribute(const std::string_view name, T& value) const
     {
-        auto it = attributesByName.find(name);
-        return it == attributesByName.end() ? false : readText(it->second->value, value);
+        auto it = attributesByName_.find(name);
+        return it == attributesByName_.end() ? false : readText(it->second->value, value);
     }
 
-    bool hasAttribute(const std::string& name) const { return attributesByName.contains(name); }
+    bool hasAttribute(const std::string_view name) const { return attributesByName_.contains(name); }
 
     ///Create or update an XML attribute.
     /**
@@ -72,30 +69,30 @@ public:
       \param value The value to set.
     */
     template <class T>
-    void setAttribute(std::string name, const T& value)
+    void setAttribute(std::string&& name, const T& value)
     {
         std::string attrValue;
         writeText(value, attrValue);
 
-        auto it = attributesByName.find(name);
-        if (it != attributesByName.end())
+        auto it = attributesByName_.find(name);
+        if (it != attributesByName_.end())
             it->second->value = std::move(attrValue);
         else
         {
-            attributes_.push_back({name, std::move(attrValue)});
-            attributesByName.emplace(std::move(name), --attributes_.end());
+            attributes_.emplace_back(std::move(name), std::move(attrValue));
+            attributesByName_.emplace(attributes_.back().name, --attributes_.end());
         }
-        static_assert(std::is_same_v<decltype(attributes_), std::list<Attribute>>); //must NOT invalidate references used in "attributesByName"!
+        static_assert(std::is_same_v<decltype(attributes_), std::list<Attribute>>); //must NOT invalidate references used in "attributesByName_"!
     }
 
     ///Remove the attribute with the given name.
-    void removeAttribute(const std::string& name)
+    void removeAttribute(const std::string_view name)
     {
-        auto it = attributesByName.find(name);
-        if (it != attributesByName.end())
+        auto it = attributesByName_.find(name);
+        if (it != attributesByName_.end())
         {
             attributes_.erase(it->second);
-            attributesByName.erase(it);
+            attributesByName_.erase(it);
         }
         else assert(false);
     }
@@ -150,8 +147,8 @@ public:
 
     struct Attribute
     {
-        std::string name;
-        std::string value;
+        const std::string name;
+        /**/  std::string value;
     };
     using AttrIter = std::list<Attribute>::const_iterator;
 
@@ -171,7 +168,7 @@ public:
         name_              .swap(other.name_);
         value_             .swap(other.value_);
         attributes_        .swap(other.attributes_);
-        attributesByName   .swap(other.attributesByName);
+        attributesByName_  .swap(other.attributesByName_);
         childElements_     .swap(other.childElements_);
         childElementByName_.swap(other.childElementByName_);
 
@@ -188,10 +185,10 @@ private:
     std::string name_;
     std::string value_;
 
-    std::list<Attribute>                                            attributes_;      //attributes in order of creation
-    std::unordered_map<std::string, std::list<Attribute>::iterator> attributesByName; //alternate view for lookup
+    std::list<Attribute>                                                 attributes_;       //attributes in order of insertion
+    std::unordered_map<std::string_view, std::list<Attribute>::iterator> attributesByName_; //alternate view for lookup
 
-    std::list<XmlElement>                                            childElements_;      //child elements in order of creation
+    std::list<XmlElement>                                            childElements_;      //child elements in order of insertion
     std::unordered_map<std::string, std::list<XmlElement>::iterator> childElementByName_; //alternate view for lookup of (*first*) child by name
 
     XmlElement* parent_ = nullptr; //currently unused: YAGNI?
@@ -265,5 +262,3 @@ private:
     XmlElement root_{"Root"};
 };
 }
-
-#endif //DOM_H_82085720723894567204564256

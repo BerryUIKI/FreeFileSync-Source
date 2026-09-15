@@ -3,12 +3,14 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef CURL_WRAP_H_2879058325032785032789645
-#define CURL_WRAP_H_2879058325032785032789645
+//#pragma once
+#ifndef CURL_WRAP_H
+    #define CURL_WRAP_H
+#else
+    #error Why is this header already defined? Do not include in other headers: encapsulate the gory details!
+#endif //CURL_WRAP
 
 #include <chrono>
-#include <span>
 #include <functional>
 #include <zen/sys_error.h>
 
@@ -55,7 +57,7 @@ public:
                    const std::vector<std::string>& extraHeaders, const std::vector<CurlOption>& extraOptions,
                    const std::function<void  (std::span<const char> buf)>& writeResponse /*throw X*/, //optional
                    const std::function<size_t(std::span<      char> buf)>& readRequest   /*throw X*/, //optional; return "bytesToRead" bytes unless end of stream!
-                   const std::function<void(const std::string_view& header)>& receiveHeader /*throw X*/,
+                   const std::function<void  (const std::string_view   header)>& receiveHeader /*throw X*/,
                    int timeoutSec); //throw SysError, X
 
     std::chrono::steady_clock::time_point getLastUseTime() const { return lastSuccessfulUseTime_; }
@@ -73,7 +75,3 @@ private:
 
 std::wstring formatCurlStatusCode(CURLcode sc);
 }
-
-#else
-#error Why is this header already defined? Do not include in other headers: encapsulate the gory details!
-#endif //CURL_WRAP_H_2879058325032785032789645

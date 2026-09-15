@@ -3,15 +3,12 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef XML_H_349578228034572457454554
-#define XML_H_349578228034572457454554
+#pragma once
 
 #include <zen/file_io.h>
 #include <zen/file_access.h>
 #include "cvrt_struc.h"
 #include "parser.h"
-
 
 /// The zen::Xml namespace
 namespace zen
@@ -35,7 +32,7 @@ XmlDoc loadXml(const Zstring& filePath) //throw FileError
 {
     FileInputPlain fileIn(filePath); //throw FileError, ErrorFileLocked
     std::string headBuf;
-    const size_t headSizeMin = BYTE_ORDER_MARK_UTF8.size() + strLength("<?xml?>");
+    const size_t headSizeMin = BYTE_ORDER_MARK_UTF8.size() + strSize("<?xml?>");
 
     const std::string buf = unbufferedLoad<std::string>([&](void* buffer, size_t bytesToRead)
     {
@@ -401,5 +398,3 @@ private:
     std::string elementNameFmt_; //e.g. "<Root> <Child> <List>[1]"
 };
 }
-
-#endif //XML_H_349578228034572457454554

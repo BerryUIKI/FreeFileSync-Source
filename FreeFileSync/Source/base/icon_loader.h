@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef ICON_LOADER_H_1348701985713445
-#define ICON_LOADER_H_1348701985713445
+#pragma once
 
 #include <zen/zstring.h>
 #include <wx+/image_holder.h>
 #include <wx/image.h>
-
 
 namespace fff
 {
@@ -30,5 +27,3 @@ zen::ImageHolder getThumbnailImage(const Zstring& filePath, int maxSize); //thro
 wxImage extractWxImage(zen::ImageHolder&& ih);
 wxImage extractWxImage(zen::FileIconHolder&& fih); //might fail if icon theme is missing a MIME type!
 }
-
-#endif //ICON_LOADER_H_1348701985713445

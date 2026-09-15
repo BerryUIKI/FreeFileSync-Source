@@ -3,13 +3,10 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef NORM_FILTER_H_974896787346251
-#define NORM_FILTER_H_974896787346251
+#pragma once
 
 #include "path_filter.h"
 #include "soft_filter.h"
-
 
 namespace fff
 {
@@ -63,5 +60,3 @@ NormalizedFilter normalizeFilters(const FilterConfig& global, const FilterConfig
                             combineFilters(globalTimeSize, localTimeSize));
 }
 }
-
-#endif //NORM_FILTER_H_974896787346251

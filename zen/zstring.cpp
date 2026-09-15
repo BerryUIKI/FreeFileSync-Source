@@ -5,7 +5,6 @@
 // *****************************************************************************
 
 #include "zstring.h"
-    //#include <glib.h>
     #include "sys_error.h"
 
 using namespace zen;
@@ -13,6 +12,7 @@ using namespace zen;
 
 namespace
 {
+
 Zstring getUnicodeNormalForm_NonAsciiValidUtf(const Zstring& str, UnicodeNormalForm form)
 {
     //Example: const char* decomposed  = "\x6f\xcc\x81"; //ó
@@ -22,12 +22,12 @@ Zstring getUnicodeNormalForm_NonAsciiValidUtf(const Zstring& str, UnicodeNormalF
 
     try
     {
-        gchar* strNorm = ::g_utf8_normalize(str.c_str(), str.length(), form == UnicodeNormalForm::nfc ? G_NORMALIZE_NFC : G_NORMALIZE_NFD);
+        gchar* strNorm = ::g_utf8_normalize(str.c_str(), str.size(), form == UnicodeNormalForm::nfc ? G_NORMALIZE_NFC : G_NORMALIZE_NFD);
         if (!strNorm)
             throw SysError(formatSystemError("g_utf8_normalize", L"", L"Conversion failed."));
         ZEN_ON_SCOPE_EXIT(::g_free(strNorm));
 
-        const std::string_view strNormView(strNorm, strLength(strNorm));
+        const std::string_view strNormView(strNorm, strSize(strNorm));
 
         if (equalString(str, strNormView)) //avoid extra memory allocation
             return str;
@@ -81,19 +81,10 @@ Zstring getValidUtf(const Zstring& str)
 }
 
 
-Zstring getUpperCaseAscii(const Zstring& str)
-{
-    assert(isAsciiString(str));
-
-    Zstring output = str;
-    for (Zchar& c : output)  //identical to LCMapStringEx(), g_unichar_toupper(), CFStringUppercase() [verified!]
-        c = asciiToUpper(c); //
-    return output;
-}
-
-
 Zstring getUpperCaseNonAscii(const Zstring& str)
 {
+    assert(!isAsciiString(str));
+
     const Zstring& strValidUtf = getValidUtf(str);
     try
     {
@@ -133,7 +124,7 @@ Zstring getUnicodeNormalForm(const Zstring& str, UnicodeNormalForm form)
 Zstring getUpperCase(const Zstring& str)
 {
     return isAsciiString(str) ? //fast path: in the range of 3.5ns
-           getUpperCaseAscii(str) :
+           getAsciiUpperCase(str) :
            getUpperCaseNonAscii(str); //slow path
 }
 
@@ -286,15 +277,15 @@ std::weak_ordering compareNoCase(const Zstring& lhs, const Zstring& rhs)
     //can't we instead skip isAsciiString() and compare chars as long as isAsciiChar()?
     // => NOPE! e.g. decomposed Unicode! A seemingly single isAsciiChar() might be followed by a combining character!!!
 
-    return (isAsciiL ? getUpperCaseAscii(lhs) : getUpperCaseNonAscii(lhs)) <=>
-           (isAsciiR ? getUpperCaseAscii(rhs) : getUpperCaseNonAscii(rhs));
+    return (isAsciiL ? getAsciiUpperCase(lhs) : getUpperCaseNonAscii(lhs)) <=>
+           (isAsciiR ? getAsciiUpperCase(rhs) : getUpperCaseNonAscii(rhs));
 }
 
 
 bool equalNoCase(const Zstring& lhs, const Zstring& rhs)
 {
-    const bool isAsciiL = isAsciiString(lhs);
-    const bool isAsciiR = isAsciiString(rhs);
+    const bool isAsciiL = isAsciiString(lhs); //need *full* check first, see above comment regarding "decomposed Unicode"
+    const bool isAsciiR = isAsciiString(rhs); //
 
     //fast-path: no extra memory allocations
     //caveat: ASCII-char and non-ASCII Unicode *can* compare case-insensitive equal!!! e.g. i and ı https://freefilesync.org/forum/viewtopic.php?t=9718
@@ -310,6 +301,6 @@ bool equalNoCase(const Zstring& lhs, const Zstring& rhs)
         return true;
     }
 
-    return (isAsciiL ? getUpperCaseAscii(lhs) : getUpperCaseNonAscii(lhs)) ==
-           (isAsciiR ? getUpperCaseAscii(rhs) : getUpperCaseNonAscii(rhs));
+    return (isAsciiL ? getAsciiUpperCase(lhs) : getUpperCaseNonAscii(lhs)) ==
+           (isAsciiR ? getAsciiUpperCase(rhs) : getUpperCaseNonAscii(rhs));
 }

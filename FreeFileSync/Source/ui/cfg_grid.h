@@ -3,16 +3,13 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef CONFIG_HISTORY_3248789479826359832
-#define CONFIG_HISTORY_3248789479826359832
+#pragma once
 
 #include <wx+/grid.h>
 #include <wx+/dc.h>
 #include <zen/zstring.h>
 #include "../return_codes.h"
 #include "../afs/concrete.h"
-
 
 namespace fff
 {
@@ -143,7 +140,7 @@ private:
     void addCfgFilesImpl(const std::vector<Zstring>& filePaths);
 
     void sortListView();
-    template <bool ascending> void sortListViewImpl();
+    template <zen::SortDirection sortDir> void sortListViewImpl();
 
     const Zstring lastRunConfigPath_ = getLastRunConfigPath(); //let's not use another static...
 
@@ -168,5 +165,3 @@ int  getSyncOverdueDays(zen::Grid& grid);
 void setSyncOverdueDays(zen::Grid& grid, int syncOverdueDays);
 }
 }
-
-#endif //CONFIG_HISTORY_3248789479826359832

@@ -3,18 +3,14 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef SCOPE_GUARD_H_8971632487321434
-#define SCOPE_GUARD_H_8971632487321434
+#pragma once
 
 #include <cassert>
 #include "legacy_compiler.h" //std::uncaught_exceptions
 
-//best of Zen, Loki and C++17
-
 namespace zen
 {
-/*  Scope Guard
+/*  Scope Guard: best of Zen, Loki and C++20
 
         auto guardAio = zen::makeGuard<ScopeGuardRunMode::onExit>([&] { ::CloseHandle(hDir); });
             ...
@@ -31,36 +27,6 @@ enum class ScopeGuardRunMode
     onSuccess,
     onFail
 };
-
-
-//partially specialize scope guard destructor code and get rid of those pesky MSVC "4127 conditional expression is constant"
-template <typename F> inline
-void runScopeGuardDestructor(F& fun, bool failed, std::integral_constant<ScopeGuardRunMode, ScopeGuardRunMode::onExit>)
-{
-    if (!failed)
-        fun(); //throw X
-    else
-        try { fun(); }
-        catch (...) { assert(false); }
-}
-
-
-template <typename F> inline
-void runScopeGuardDestructor(F& fun, bool failed, std::integral_constant<ScopeGuardRunMode, ScopeGuardRunMode::onSuccess>)
-{
-    if (!failed)
-        fun(); //throw X
-}
-
-
-template <typename F> inline
-void runScopeGuardDestructor(F& fun, bool failed, std::integral_constant<ScopeGuardRunMode, ScopeGuardRunMode::onFail>) noexcept
-{
-    if (failed)
-        try { fun(); }
-        catch (...) { assert(false); }
-}
-
 
 template <ScopeGuardRunMode runMode, typename F>
 class ScopeGuard
@@ -79,7 +45,21 @@ public:
         if (!dismissed_)
         {
             const bool failed = std::uncaught_exceptions() > exeptionCount_;
-            runScopeGuardDestructor(fun_, failed, std::integral_constant<ScopeGuardRunMode, runMode>());
+
+            if constexpr (runMode == ScopeGuardRunMode::onSuccess ||
+                          runMode == ScopeGuardRunMode::onExit)
+            {
+                if (!failed)
+                    fun_(); //throw X
+            }
+
+            if constexpr (runMode == ScopeGuardRunMode::onFail ||
+                          runMode == ScopeGuardRunMode::onExit)
+            {
+                if (failed)
+                    try { fun_(); }
+                    catch (...) { assert(false); }
+            }
         }
     }
 
@@ -99,15 +79,12 @@ template <ScopeGuardRunMode runMode, class F> inline
 auto makeGuard(F&& fun) { return ScopeGuard<runMode, std::decay_t<F>>(std::forward<F>(fun)); }
 }
 
+#define ZEN_CASE_RETURN_STRING(X) case X: return ZEN_CASE_RETURN_STRING_IMPL(#X)
+#define ZEN_CASE_RETURN_STRING_IMPL(X) L ## X
+
 #define ZEN_CONCAT_SUB(X, Y) X ## Y
 #define ZEN_CONCAT(X, Y) ZEN_CONCAT_SUB(X, Y)
-
-#define ZEN_CHECK_CASE_FOR_CONSTANT(X) case X: return ZEN_CHECK_CASE_FOR_CONSTANT_IMPL(#X)
-#define ZEN_CHECK_CASE_FOR_CONSTANT_IMPL(X) L ## X
-
 
 #define ZEN_ON_SCOPE_EXIT(X)    [[maybe_unused]] auto ZEN_CONCAT(scopeGuard, __LINE__) = zen::makeGuard<zen::ScopeGuardRunMode::onExit   >([&]{ X; });
 #define ZEN_ON_SCOPE_FAIL(X)    [[maybe_unused]] auto ZEN_CONCAT(scopeGuard, __LINE__) = zen::makeGuard<zen::ScopeGuardRunMode::onFail   >([&]{ X; });
 #define ZEN_ON_SCOPE_SUCCESS(X) [[maybe_unused]] auto ZEN_CONCAT(scopeGuard, __LINE__) = zen::makeGuard<zen::ScopeGuardRunMode::onSuccess>([&]{ X; });
-
-#endif //SCOPE_GUARD_H_8971632487321434

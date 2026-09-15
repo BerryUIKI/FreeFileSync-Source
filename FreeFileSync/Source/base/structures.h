@@ -3,16 +3,13 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef STRUCTURES_H_8210478915019450901745
-#define STRUCTURES_H_8210478915019450901745
+#pragma once
 
 #include <variant>
 #include <vector>
 #include <chrono>
 #include <zen/zstring.h>
 #include "../afs/abstract.h"
-
 
 namespace fff
 {
@@ -389,5 +386,3 @@ struct WarningDialogs
     bool operator==(const WarningDialogs&) const = default;
 };
 }
-
-#endif //STRUCTURES_H_8210478915019450901745

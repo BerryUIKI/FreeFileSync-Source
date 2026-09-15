@@ -12,7 +12,7 @@
 using namespace zen;
 
 
-OsVersionDetail zen::getOsVersionDetail() //throw SysError
+OsVersionDetail impl::getOsVersionRaw() //throw SysError
 {
     /* prefer lsb_release:             lsb_release      Distributor ID: Debian
          1. terser OS name                              Release:        8.11
@@ -63,7 +63,7 @@ OsVersionDetail zen::getOsVersionDetail() //throw SysError
         throw SysError(L"Operating system release could not be determined."); //should never happen!
     //osVersion is usually available, except for Arch Linux: https://freefilesync.org/forum/viewtopic.php?t=7276
     //  lsb_release Release is "rolling"
-    //  etc/os-release: VERSION_ID is missing
+    //  /etc/os-release: VERSION_ID is missing, but there is BUILD_ID=rolling instead
 
     std::vector<std::wstring_view> verDigits = splitCpy<std::wstring_view>(osVersion, L'.', SplitOnEmpty::allow); //e.g. "7.7.1908"
     verDigits.resize(2);
@@ -81,21 +81,21 @@ OsVersionDetail zen::getOsVersionDetail() //throw SysError
 }
 
 
-OsVersion zen::getOsVersion()
+OsVersionDetail zen::getOsVersion()
 {
-    static const OsVersionDetail verDetail = []
+    static const OsVersionDetail verDetail = [] //another magic static
     {
         try
         {
-            return getOsVersionDetail(); //throw SysError
+            return impl::getOsVersionRaw(); //throw SysError
         }
-        catch (const SysError& e)
+        catch (const SysError& e) //errors are unexpected!
         {
-            logExtraError(_("Cannot get process information.") + L"\n\n" + e.toString());
-            return OsVersionDetail{}; //arrgh, it's a jungle out there: https://freefilesync.org/forum/viewtopic.php?t=7276
+            throw std::runtime_error(std::string(__FILE__) + '[' + numberTo<std::string>(__LINE__) + "] Failed to determine OS version." + "\n\n" +
+                                     utfTo<std::string>(e.toString()));
         }
     }();
-    return verDetail.version;
+    return verDetail;
 }
 
 

@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef PROCESS_CALLBACK_H_48257827842345454545
-#define PROCESS_CALLBACK_H_48257827842345454545
+#pragma once
 
 #include <string>
 #include <cstdint>
 #include <chrono>
-
 
 namespace fff
 {
@@ -87,5 +84,3 @@ struct ProcessCallback : public PhaseCallback
     virtual void initNewPhase(int itemsTotal, int64_t bytesTotal, ProcessPhase phaseId) = 0; //throw X
 };
 }
-
-#endif //PROCESS_CALLBACK_H_48257827842345454545

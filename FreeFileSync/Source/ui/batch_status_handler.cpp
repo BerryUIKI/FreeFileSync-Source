@@ -22,7 +22,7 @@ BatchStatusHandler::BatchStatusHandler(bool showProgress,
                                        std::chrono::seconds autoRetryDelay,
                                        const Zstring& soundFileSyncComplete,
                                        const Zstring& soundFileAlertPending,
-                                       const WindowLayout::Dimensions& dims,
+                                       const WindowLayout::Rect& dlgRect,
                                        bool autoCloseDialog,
                                        PostBatchAction postBatchAction,
                                        BatchErrorHandling batchErrorHandling) :
@@ -35,7 +35,7 @@ BatchStatusHandler::BatchStatusHandler(bool showProgress,
     batchErrorHandling_(batchErrorHandling)
 {
     //set *after* initializer list => callbacks during construction to getErrorStats()!
-    progressDlg_ = SyncProgressDialog::create(dims, [this] { userRequestCancel(); }, *this, nullptr /*parentWindow*/, showProgress, autoCloseDialog,
+    progressDlg_ = SyncProgressDialog::create(dlgRect, [this] { userRequestCancel(); }, *this, nullptr /*parentWindow*/, showProgress, autoCloseDialog,
     {jobName}, std::chrono::system_clock::to_time_t(startTime), ignoreErrors, autoRetryCount, [&]
     {
         switch (postBatchAction)
@@ -190,11 +190,12 @@ BatchStatusHandler::DlgOptions BatchStatusHandler::showResult()
     else if (!suspend && !autoClose && //only play when actually showing results dialog
              !soundFileSyncComplete_.empty())
     {
-        //wxWidgets shows modal error dialog by default => "no, wxWidgets, NO!"
-        wxLog* oldLogTarget = wxLog::SetActiveTarget(new wxLogStderr); //transfer and receive ownership!
-        ZEN_ON_SCOPE_EXIT(delete wxLog::SetActiveTarget(oldLogTarget));
+        wxLogCollector soundLog; //wxWidgets shows modal error dialog by default => "no, wxWidgets, NO!"
 
         wxSound::Play(utfTo<wxString>(soundFileSyncComplete_), wxSOUND_ASYNC);
+
+        if (!soundLog.GetMessages().empty())
+            logMsg(errorLog_.ref(), utfTo<std::wstring>(soundLog.GetMessages()), MSG_TYPE_INFO);
     }
     //if (::GetForegroundWindow() != GetHWND())
     //    RequestUserAttention(); -> probably too much since task bar is already colorized with Taskbar::Status::error or Status::normal
@@ -407,8 +408,7 @@ void BatchStatusHandler::reportFatalError(const std::wstring& msg)
 Statistics::ErrorStats BatchStatusHandler::getErrorStats() const
 {
     //errorLog_ is an "append only" structure, so we can make getErrorStats() complexity "constant time":
-    std::for_each(errorLog_.ref().begin() + errorStatsRowsChecked_, errorLog_.ref().end(), [&](const LogEntry& entry)
-    {
+    for (const LogEntry& entry : std::span(errorLog_.ref().begin() + errorStatsRowsChecked_, errorLog_.ref().end()))
         switch (entry.type)
         {
             case MSG_TYPE_INFO:
@@ -420,7 +420,6 @@ Statistics::ErrorStats BatchStatusHandler::getErrorStats() const
                 ++errorStatsBuf_.errorCount;
                 break;
         }
-    });
     errorStatsRowsChecked_ = errorLog_.ref().size();
 
     return errorStatsBuf_;

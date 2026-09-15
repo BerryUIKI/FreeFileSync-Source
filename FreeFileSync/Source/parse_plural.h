@@ -3,12 +3,9 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef PARSE_PLURAL_H_180465845670839576
-#define PARSE_PLURAL_H_180465845670839576
+#pragma once
 
 #include <zen/string_tools.h>
-
 
 namespace plural
 {
@@ -230,7 +227,7 @@ public:
 private:
     bool startsWith(const std::string& prefix) const
     {
-        return zen::startsWith(zen::makeStringView(pos_, stream_.end()), prefix);
+        return zen::startsWith(std::string_view(pos_, stream_.end()), prefix);
     }
 
     using TokenList = std::vector<std::pair<std::string, TokenType>>;
@@ -471,5 +468,3 @@ PluralFormInfo::PluralFormInfo(const std::string& definition, int pluralCount) /
 inline
 PluralForm::PluralForm(const std::string& stream) : expr_(impl::Parser(stream, n_).parse()) {} //throw ParsingError
 }
-
-#endif //PARSE_PLURAL_H_180465845670839576

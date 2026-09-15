@@ -3,12 +3,9 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef SHELL_EXECUTE_H_23482134578134134
-#define SHELL_EXECUTE_H_23482134578134134
+#pragma once
 
 #include "file_error.h"
-
 
 namespace zen
 {
@@ -24,5 +21,3 @@ DEFINE_NEW_SYS_ERROR(SysErrorTimeOut)
 
 void openWithDefaultApp(const Zstring& itemPath); //throw FileError
 }
-
-#endif //SHELL_EXECUTE_H_23482134578134134

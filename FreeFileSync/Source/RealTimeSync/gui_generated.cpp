@@ -251,8 +251,6 @@ MainDlgGenerated::MainDlgGenerated( wxWindow* parent, wxWindowID id, const wxStr
     this->Layout();
     bSizerMain->Fit( this );
 
-    this->Centre( wxBOTH );
-
     // Connect Events
     this->Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( MainDlgGenerated::onClose ) );
     m_menuFile->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainDlgGenerated::onConfigNew ), this, m_menuItem6->GetId());

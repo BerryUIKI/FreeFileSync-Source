@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef FS_NATIVE_183247018532434563465
-#define FS_NATIVE_183247018532434563465
+#pragma once
 
 #include "abstract.h"
 
@@ -21,5 +19,3 @@ AbstractPath createItemPathNativeNoFormatting(const Zstring& nativePath); //noex
 //return empty, if not a native path
 Zstring getNativeItemPath(const AbstractPath& itemPath);
 }
-
-#endif //FS_NATIVE_183247018532434563465

@@ -14,15 +14,12 @@
 // * of the file, but you are not obligated to do so. If you do not wish to   *
 // * do so, delete this exception statement from your version.                *
 // ****************************************************************************
-
-#ifndef XBRZ_HEADER_3847894708239054
-#define XBRZ_HEADER_3847894708239054
+#pragma once
 
 #include <cstddef> //size_t
 #include <cstdint> //uint32_t
 #include <limits>
 #include "xbrz_config.h"
-
 
 namespace xbrz
 {
@@ -72,7 +69,5 @@ void nearestNeighborScale(const uint32_t* src, int srcWidth, int srcHeight,
 
 
 //parameter tuning
-bool equalColorTest2(uint32_t col1, uint32_t col2, ColorFormat colFmt, double equalColorTolerance, double testAttribute);
+bool equalColorTest(uint32_t col1, uint32_t col2, ColorFormat colFmt, double equalColorTolerance, double testAttribute);
 }
-
-#endif

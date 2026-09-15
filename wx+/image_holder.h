@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef IMAGE_HOLDER_H_284578426342567457
-#define IMAGE_HOLDER_H_284578426342567457
+#pragma once
 
 #include <memory>
     #include <gio/gio.h>
@@ -68,5 +66,3 @@ struct FileIconHolder
     explicit operator bool() const { return static_cast<bool>(gicon); }
 };
 }
-
-#endif //IMAGE_HOLDER_H_284578426342567457

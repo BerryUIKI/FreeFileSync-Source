@@ -3,15 +3,12 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef DB_FILE_H_834275398588021574
-#define DB_FILE_H_834275398588021574
+#pragma once
 
 #include <unordered_map>
 #include <zen/file_error.h>
 #include "file_hierarchy.h"
 #include "process_callback.h"
-
 
 namespace fff
 {
@@ -85,5 +82,3 @@ std::unordered_map<const BaseFolderPair*, zen::SharedRef<const InSyncFolder>> lo
 void saveLastSynchronousState(const BaseFolderPair& baseFolder, bool transactionalCopy, //throw X
                               PhaseCallback& callback /*throw X*/);
 }
-
-#endif //DB_FILE_H_834275398588021574

@@ -3,15 +3,12 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef TREE_VIEW_H_841703190201835280256673425
-#define TREE_VIEW_H_841703190201835280256673425
+#pragma once
 
 #include <functional>
 #include <wx+/grid.h>
 #include "tree_grid_attr.h"
 #include "../base/file_hierarchy.h"
-
 
 namespace fff
 {
@@ -149,8 +146,8 @@ private:
     template <class Predicate> void updateView(Predicate pred);
     void applySubView(std::vector<RootNodeImpl>&& newView);
 
-    template <bool ascending> static void sortSingleLevel(std::vector<TreeLine>& items, ColumnTypeOverview columnType);
-    template <bool ascending> struct LessShortName;
+    template <zen::SortDirection sortDir> static void sortSingleLevel(std::vector<TreeLine>& items, ColumnTypeOverview columnType);
+    template <zen::SortDirection sortDir> struct LessShortName;
 
     std::vector<TreeLine> flatTree_; //collapsable/expandable sub-tree of folderCmpView -> always sorted!
     /*             /|\
@@ -175,5 +172,3 @@ void setShowPercentage(zen::Grid& grid, bool value);
 bool getShowPercentage(const zen::Grid& grid);
 }
 }
-
-#endif //TREE_VIEW_H_841703190201835280256673425

@@ -3,13 +3,10 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef SOFT_FILTER_H_810457108534657
-#define SOFT_FILTER_H_810457108534657
+#pragma once
 
 #include <limits>
 #include "structures.h"
-
 
 namespace fff
 {
@@ -107,5 +104,3 @@ bool SoftFilter::isNull() const //filter is equivalent to NullFilter, but may be
            matchesFolder_;
 }
 }
-
-#endif //SOFT_FILTER_H_810457108534657

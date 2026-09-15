@@ -3,16 +3,13 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef GRID_H_834702134831734869987
-#define GRID_H_834702134831734869987
+#pragma once
 
 #include <memory>
 #include <optional>
 #include <vector>
 #include <zen/stl_tools.h>
 #include <wx/scrolwin.h>
-
 
 //a user-friendly, extensible and high-performance grid control
 namespace zen
@@ -400,5 +397,3 @@ std::vector<ColAttrReal> convertColAttributes(const std::vector<Grid::ColAttribu
     return output;
 }
 }
-
-#endif //GRID_H_834702134831734869987

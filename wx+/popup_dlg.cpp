@@ -11,8 +11,7 @@
 #include <wx/display.h>
 #include <wx/sound.h>
 #include "bitmap_button.h"
-#include "no_flicker.h"
-#include "window_layout.h"
+#include "window_tools.h"
 #include "image_resources.h"
 #include "popup_dlg_generated.h"
 #include "taskbar.h"
@@ -80,7 +79,7 @@ void setBestInitialSize(wxRichTextCtrl& ctrl, const wxString& text, wxSize maxSi
 
     ctrl.SetMinSize(bestSize); //alas, SetMinClientSize() is just not working!
 #if 0
-    std::cout << "rowCount       " << rowCount << "\n" <<
+    std::cerr << "rowCount       " << rowCount << "\n" <<
                  "maxLineWidth   " << maxLineWidth << "\n" <<
                  "rowHeight      " << rowHeight << "\n" <<
                  "haveLineWrap   " << haveLineWrap << "\n" <<
@@ -226,11 +225,13 @@ public:
 
         //------------------------------------------------------------------------------
 
-        auto setButtonImage = [&](wxButton& button, ConfirmationButton3 btnType)
+        auto setButtonImage = [&](wxButton& btn, ConfirmationButton3 btnType)
         {
             auto it = cfg.buttonImages.find(btnType);
             if (it != cfg.buttonImages.end())
-                setImage(button, it->second); //caveat: image + text at the same time not working on GTK < 2.6
+            {
+    btn.SetBitmapLabel(toDpiScaledBitmap(it->second)); //the first call to SetBitmapLabel() *implicitly* sets the disabled bitmap, too, subsequent calls, DON'T!
+            }
         };
         setButtonImage(*m_buttonAccept,  ConfirmationButton3::accept);
         setButtonImage(*m_buttonAccept2, ConfirmationButton3::accept2);
@@ -293,7 +294,7 @@ public:
         Show(); //GTK3 size calculation requires visible window: https://github.com/wxWidgets/wxWidgets/issues/16088
         //Hide(); -> avoids old position flash before Center() on GNOME but causes hang on KDE? https://freefilesync.org/forum/viewtopic.php?t=10103#p42404
 #endif
-        Center(); //needs to be re-applied after a dialog size change!
+        Center(); //apply *after* dialog size change!
 
 
         Raise(); //[!] popup may be triggered by ffs_batch job running in the background!

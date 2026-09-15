@@ -116,7 +116,7 @@ private:
 
         tooltip += L"\n" + statusTxt;
 
-        SetIcon(toScaledBitmap(img), tooltip);
+        SetIcon(toDpiScaledBitmap(img), tooltip);
     }
 
     wxMenu* CreatePopupMenu() override

@@ -3,13 +3,10 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef FMT_UNIT_8702184019487324
-#define FMT_UNIT_8702184019487324
+#pragma once
 
 #include <string>
 #include <optional>
-
 
 namespace zen
 {
@@ -40,5 +37,3 @@ WeekDay getFirstDayOfWeek();
 
 namespace impl { WeekDay getFirstDayOfWeekImpl(); } //throw SysError
 }
-
-#endif

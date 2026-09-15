@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef STREAM_BUFFER_H_08492572089560298
-#define STREAM_BUFFER_H_08492572089560298
+#pragma once
 
 #include <thread>
 #include "ring_buffer.h"
 #include "string_tools.h"
-
 
 namespace zen
 {
@@ -203,5 +200,3 @@ private:
     std::atomic<uint64_t> totalBytesRead_   {0}; //
 };
 }
-
-#endif //STREAM_BUFFER_H_08492572089560298

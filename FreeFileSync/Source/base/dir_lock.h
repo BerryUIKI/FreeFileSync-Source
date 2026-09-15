@@ -3,15 +3,12 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef DIR_LOCK_H_81740832174954356
-#define DIR_LOCK_H_81740832174954356
+#pragma once
 
 #include <memory>
 #include <chrono>
 #include <functional>
 #include <zen/file_error.h>
-
 
 namespace fff
 {
@@ -55,5 +52,3 @@ namespace impl //declare for unit tests:
 Zstring getAbandonedLockFileName(const Zstring& lockFilePath); //throw FileError
 }
 }
-
-#endif //DIR_LOCK_H_81740832174954356

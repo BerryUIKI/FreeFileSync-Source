@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef LEGACY_COMPILER_H_839567308565656789
-#define LEGACY_COMPILER_H_839567308565656789
+#pragma once
 
 #include <version> //contains all __cpp_lib_<feature> macros
 #include <string>
@@ -24,7 +22,6 @@
     Xcode  https://developer.apple.com/xcode/cpp
     libc++ https://libcxx.llvm.org/cxx2a_status.html                                     */
 
-
 namespace std
 {
 
@@ -37,45 +34,12 @@ basic_string<Char, Traits, Alloc> operator+(basic_string<Char, Traits, Alloc>&& 
 
 //template <class Char> inline
 //basic_string<Char> operator+(const basic_string<Char>& lhs, const basic_string_view<Char>& rhs) { return basic_string<Char>(lhs) + rhs; }
-//-> somewhat inefficient: single memory allocation should suffice!!!
+//-> somewhat inefficient: better implement using only a single memory allocation!!!
 }
 //---------------------------------------------------------------------------------
 
-//support for std::string::resize_and_overwrite()
-    #define ZEN_HAVE_RESIZE_AND_OVERWRITE 1
-
 namespace zen
 {
-//reference a sub-string for consumption by zen string_tools
-//=> std::string_view seems decent, but of course fucks up in one regard: construction
-
-//std::string_view(first, last) is not available before C++20 (at least on clang)
-template <class Iterator> inline
-auto makeStringView(Iterator first, Iterator last)
-{
-    using CharType = std::remove_cvref_t<decltype(*first)>;
-
-    return std::basic_string_view<CharType>(first != last ? &*first :
-                                            reinterpret_cast<CharType*>(0x1000), /*Win32 APIs like CompareStringOrdinal() choke on nullptr!*/
-                                            last - first);
-}
-//std::string_view(char*, int) fails to compile! expected size_t as second parameter
-template <class Iterator> inline
-auto makeStringView(Iterator first, size_t len) { return makeStringView(first, first + len); }
-
-
-
 double fromChars(const char* first, const char* last);
-const char* toChars(char* first, char* last, double num);
+char* toChars(char* first, char* last, double num);
 }
-
-
-#if 0 //neat: supported on MSVC and GCC, but not yet on Clang
-auto closure = [](this auto&& self)
-{
-    self(); //just call ourself until the stack overflows
-    //e.g. use for: deleteEmptyFolderTask, removeFolderRecursionImpl, scheduleMoreTasks, traverse
-};
-#endif
-
-#endif //LEGACY_COMPILER_H_839567308565656789

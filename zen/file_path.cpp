@@ -6,6 +6,7 @@
 
 #include "file_path.h"
 #include "zstring.h"
+    #include <unistd.h>
 
 using namespace zen;
 
@@ -48,7 +49,7 @@ std::optional<PathComponents> zen::parsePathComponents(const Zstring& itemPath)
 
     if (!pc && startsWith(itemPath, "/run/user/")) //Ubuntu, e.g.: /run/user/1000/gvfs/smb-share:server=192.168.62.145,share=folder
     {
-        Zstring tmp(itemPath.begin() + strLength("/run/user/"), itemPath.end());
+        Zstring tmp(itemPath.begin() + strSize("/run/user/"), itemPath.end());
         tmp = beforeFirst(tmp, "/gvfs/", IfNotFoundReturn::none);
         if (!tmp.empty() && std::all_of(tmp.begin(), tmp.end(), [](const char c) { return isDigit(c); }))
         /**/pc = doParse(6 /*sepCountVolumeRoot*/, false /*rootWithSep*/);
@@ -157,7 +158,9 @@ std::weak_ordering zen::compareNativePath(const Zstring& lhs, const Zstring& rhs
 
 namespace
 {
-    constinit Global<std::unordered_map<Zstring, Zstring>> globalEnvVars;
+    constinit Global<const std::unordered_map<Zstring, Zstring>> globalEnvVars;
+    GLOBAL_RUN_ONCE(getEnvironmentVar("")); //ensure init happens during static construction at the latest (=> very likely on main thread)
+    //                                        so that accessing environ/_NSGetEnviron should be thread-safe
 }
 
 
@@ -169,7 +172,7 @@ std::optional<Zstring> zen::getEnvironmentVar(const ZstringView name)
         getenv_s() to the rescue!? not implemented on GCC, apparently *still* not threadsafe!!!
 
         => *eff* this: make a global copy during start up! */
-    globalEnvVars.setOnce([]
+    globalEnvVars.setOnce([] //don't just rely on GLOBAL_RUN_ONCE: allow calling this function at ANY time during static initialization
     {
         assert(runningOnMainThread());
 
@@ -179,13 +182,13 @@ std::optional<Zstring> zen::getEnvironmentVar(const ZstringView name)
             {
                 const std::string_view l(*line);
                 envVars->emplace(beforeFirst(l, '=', IfNotFoundReturn::all),
-                                 afterFirst(l, '=', IfNotFoundReturn::none));
+                                 afterFirst (l, '=', IfNotFoundReturn::none));
             }
 
         return envVars;
     });
 
-    if (std::shared_ptr<std::unordered_map<Zstring, Zstring>> envVars = globalEnvVars.get())
+    if (auto envVars = globalEnvVars.get())
     {
         if (const auto it = envVars->find(name);
             it != envVars->end())

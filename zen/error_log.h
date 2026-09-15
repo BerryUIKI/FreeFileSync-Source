@@ -3,16 +3,13 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef ERROR_LOG_H_8917590832147915
-#define ERROR_LOG_H_8917590832147915
+#pragma once
 
 #include <cassert>
 #include <vector>
 #include "time.h"
 #include "i18n.h"
 #include "zstring.h"
-
 
 namespace zen
 {
@@ -123,5 +120,3 @@ std::string formatMessage(const LogEntry& entry)
     return msgFmt;
 }
 }
-
-#endif //ERROR_LOG_H_8917590832147915

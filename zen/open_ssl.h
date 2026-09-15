@@ -3,12 +3,9 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef OPEN_SSL_H_801974580936508934568792347506
-#define OPEN_SSL_H_801974580936508934568792347506
+#pragma once
 
 #include "sys_error.h"
-
 
 namespace zen
 {
@@ -36,5 +33,3 @@ std::string convertRsaKey(const std::string_view keyStream, RsaStreamType typeFr
 bool isPuttyKeyStream(const std::string_view keyStream);
 std::string convertPuttyKeyToPkix(const std::string_view keyStream, const std::string_view passphrase); //throw SysError
 }
-
-#endif //OPEN_SSL_H_801974580936508934568792347506

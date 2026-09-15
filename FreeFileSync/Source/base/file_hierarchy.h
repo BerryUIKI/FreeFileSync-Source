@@ -3,16 +3,13 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef FILE_HIERARCHY_H_257235289645296
-#define FILE_HIERARCHY_H_257235289645296
+#pragma once
 
 #include <string>
 #include <unordered_map>
 #include "structures.h"
 #include "path_filter.h"
 #include "../afs/abstract.h"
-
 
 namespace fff
 {
@@ -1486,8 +1483,7 @@ bool FileSystemObject::passFileFilter(const PathFilter& filter) const
 template <SelectSide side> inline
 time_t SymlinkPair::getLastWriteTime() const
 {
+    assert(!isEmpty<side>());
     return selectParam<side>(attrL_, attrR_).modTime;
 }
 }
-
-#endif //FILE_HIERARCHY_H_257235289645296

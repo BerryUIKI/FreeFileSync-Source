@@ -3,15 +3,12 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef GUID_H_80425780237502345
-#define GUID_H_80425780237502345
+#pragma once
 
     #include <fcntl.h> //open
     #include <unistd.h> //close, getentropy
     #include <zen/sys_error.h>
     //#include <uuid/uuid.h> -> uuid_generate(), uuid_unparse(); avoid additional dependency for "sudo apt-get install uuid-dev"
-
 
 namespace zen
 {
@@ -50,5 +47,3 @@ std::string generateGUID() //creates a 16-byte GUID
 
 }
 }
-
-#endif //GUID_H_80425780237502345

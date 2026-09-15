@@ -304,7 +304,7 @@ public:
                             }
                             else
                                 for (int i = 0; i < num_prompts; ++i)
-                                    unexpectedPrompts += (unexpectedPrompts.empty() ? L"" : L"|") + utfTo<std::wstring>(makeStringView(reinterpret_cast<const char*>(prompts[i].text), prompts[i].length));
+                                    unexpectedPrompts += (unexpectedPrompts.empty() ? L"" : L"|") + utfTo<std::wstring>(std::string_view(reinterpret_cast<const char*>(prompts[i].text), prompts[i].length));
                         };
                         using AuthCbType = decltype(authCallback);
 
@@ -313,7 +313,7 @@ public:
                         {
                             try
                             {
-                                AuthCbType* callback = *reinterpret_cast<AuthCbType**>(abstract); //free this poor little C-API from its shackles and redirect to a proper lambda
+                                AuthCbType* callback = static_cast<AuthCbType*>(*abstract); //free this poor little C-API from its shackles and redirect to a proper lambda
                                 (*callback)(num_prompts, prompts, responses); //name, instruction are nullptr for sourceforge.net
                             }
                             catch (...) { assert(false); }
@@ -322,7 +322,7 @@ public:
                         if (*::libssh2_session_abstract(sshSession_))
                             throw SysError(L"libssh2_session_abstract: non-null value");
 
-                        *reinterpret_cast<AuthCbType**>(::libssh2_session_abstract(sshSession_)) = &authCallback;
+                        *::libssh2_session_abstract(sshSession_) = &authCallback;
                         ZEN_ON_SCOPE_EXIT(*::libssh2_session_abstract(sshSession_) = nullptr);
 
                         if (::libssh2_userauth_keyboard_interactive(sshSession_, usernameUtf8, authCallbackWrapper) != 0)
@@ -366,12 +366,12 @@ public:
                     {
                         //libssh2_userauth_publickey_frommemory()'s "Unable to extract public key from private key" isn't exactly *helpful*
                         //=> detect invalid key files and give better error message:
-                        const wchar_t* invalidKeyFormat = [&]() -> const wchar_t*
+                        const wchar_t* invalidKeyFormat = [&] -> const wchar_t*
                         {
                             //"-----BEGIN PUBLIC KEY-----"      OpenSSH SSH-2 public key (X.509 SubjectPublicKeyInfo) = PKIX
                             //"-----BEGIN RSA PUBLIC KEY-----"  OpenSSH SSH-2 public key (PKCS#1 RSAPublicKey)
                             //"---- BEGIN SSH2 PUBLIC KEY ----" SSH-2 public key (RFC 4716 format)
-                            const std::string_view firstLine = makeStringView(pkStream.begin(), std::find_if(pkStream.begin(), pkStream.end(), isLineBreak<char>));
+                            const std::string_view firstLine(pkStream.begin(), std::find_if(pkStream.begin(), pkStream.end(), isLineBreak<char>));
                             if (contains(firstLine, "PUBLIC KEY"))
                                 return L"OpenSSH public key";
 
@@ -382,7 +382,7 @@ public:
 
                             if (std::count(pkStream.begin(), pkStream.end(), ' ') == 2 &&
                             /**/std::all_of(pkStream.begin(), pkStream.end(), [](const char c) { return isDigit(c) || c == ' '; }))
-                            return L"SSH-1 public key";
+                            /**/return L"SSH-1 public key";
 
                             //"-----BEGIN PRIVATE KEY-----"                => OpenSSH SSH-2 private key (PKCS#8 PrivateKeyInfo)          => should work
                             //"-----BEGIN ENCRYPTED PRIVATE KEY-----"      => OpenSSH SSH-2 private key (PKCS#8 EncryptedPrivateKeyInfo) => should work
@@ -737,11 +737,7 @@ class SftpSessionManager //reuse (healthy) SFTP sessions globally
     struct SshSessionCache;
 
 public:
-    SftpSessionManager() : sessionCleaner_([this]
-    {
-        setCurrentThreadName(Zstr("Session Cleaner[SFTP]"));
-        runGlobalSessionCleanUp(); /*throw ThreadStopRequest*/
-    }) {}
+    SftpSessionManager() {}
 
     struct ReUseOnDelete
     {
@@ -836,7 +832,6 @@ public:
         const int timeoutSec_;
     };
 
-
     std::shared_ptr<SshSessionShared> getSharedSession(const SftpLogin& login) //throw SysError, SysErrorPassword
     {
         Protected<SshSessionCache>& sessionCache = getSessionCache(login);
@@ -868,6 +863,8 @@ public:
                 sessionCfg = *cache.activeCfg;
         });
 
+        startGlobalSessionCleanUp();
+
         //create new SFTP session outside the lock: 1. don't block other threads 2. non-atomic regarding "sessionCache"! => one session too many is not a problem!
         if (!sharedSession)
         {
@@ -885,7 +882,6 @@ public:
 
         return sharedSession;
     }
-
 
     std::unique_ptr<SshSessionExclusive> getExclusiveSession(const SftpLogin& login) //throw SysError
     {
@@ -906,6 +902,8 @@ public:
             else
                 sessionCfg = *cache.activeCfg;
         });
+
+        startGlobalSessionCleanUp();
 
         //create new SFTP session outside the lock: 1. don't block other threads 2. non-atomic regarding "sessionCache"! => one session too many is not a problem!
         if (!sshSession)
@@ -1001,47 +999,55 @@ private:
     }
 
     //run a dedicated clean-up thread => it's unclear when the server let's a connection time out, so we do it preemptively
-    //context of worker thread:
-    void runGlobalSessionCleanUp() //throw ThreadStopRequest
+    void startGlobalSessionCleanUp()
     {
-        std::chrono::steady_clock::time_point lastCleanupTime;
-        for (;;)
+        static constinit std::once_flag onceStartThread; //=> no "magic static" code gen
+        std::call_once(onceStartThread, [this]
         {
-            const auto now = std::chrono::steady_clock::now();
-
-            if (now < lastCleanupTime + SFTP_SESSION_CLEANUP_INTERVAL)
-                interruptibleSleep(lastCleanupTime + SFTP_SESSION_CLEANUP_INTERVAL - now); //throw ThreadStopRequest
-
-            lastCleanupTime = std::chrono::steady_clock::now();
-
-            std::vector<Protected<SshSessionCache>*> sessionCaches; //pointers remain stable, thanks to std::map<>
-
-            globalSessionCache_.access([&](GlobalSshSessions& sessionsById)
+            sessionCleaner_ = InterruptibleThread([this]
             {
-                for (auto& [sessionId, idleSession] : sessionsById)
-                    sessionCaches.push_back(&idleSession);
-            });
-            for (Protected<SshSessionCache>* sessionCache : sessionCaches)
+                setCurrentThreadName(Zstr("Session Cleaner[SFTP]"));
+
+                std::chrono::steady_clock::time_point lastCleanupTime;
                 for (;;)
                 {
-                    bool done = false;
-                    sessionCache->access([&](SshSessionCache& cache)
+                    const auto now = std::chrono::steady_clock::now();
+
+                    if (now < lastCleanupTime + SFTP_SESSION_CLEANUP_INTERVAL)
+                        interruptibleSleep(lastCleanupTime + SFTP_SESSION_CLEANUP_INTERVAL - now); //throw ThreadStopRequest
+
+                    lastCleanupTime = std::chrono::steady_clock::now();
+
+                    std::vector<Protected<SshSessionCache>*> sessionCaches; //pointers remain stable, thanks to std::map<>
+
+                    globalSessionCache_.access([&](GlobalSshSessions& sessionsById)
                     {
-                        for (std::unique_ptr<SshSession>& sshSession : cache.idleSshSessions)
-                            if (!sshSession->isHealthy()) //!isHealthy() sessions are destroyed after use => in this context this means they have been idle for too long
-                            {
-                                sshSession.swap(cache.idleSshSessions.back());
-                                /**/            cache.idleSshSessions.pop_back(); //run ~SshSession *inside* the lock! => avoid hitting server limits!
-                                return; //don't hold lock for too long: delete only one session at a time, then yield...
-                            }
-                        std::erase_if(cache.sshSessionsWithThreadAffinity, [](const auto& v) { return v.second.expired(); }); //clean up dangling weak pointer
-                        done = true;
+                        for (auto& [sessionId, idleSession] : sessionsById)
+                            sessionCaches.push_back(&idleSession);
                     });
-                    if (done)
-                        break;
-                    std::this_thread::yield(); //outside the lock
+                    for (Protected<SshSessionCache>* sessionCache : sessionCaches)
+                        for (;;)
+                        {
+                            bool done = false;
+                            sessionCache->access([&](SshSessionCache& cache)
+                            {
+                                for (std::unique_ptr<SshSession>& sshSession : cache.idleSshSessions)
+                                    if (!sshSession->isHealthy()) //!isHealthy() sessions are destroyed after use => in this context this means they have been idle for too long
+                                    {
+                                        sshSession.swap(cache.idleSshSessions.back());
+                                        /**/            cache.idleSshSessions.pop_back(); //run ~SshSession *inside* the lock! => avoid hitting server limits!
+                                        return; //don't hold lock for too long: delete only one session at a time, then yield...
+                                    }
+                                std::erase_if(cache.sshSessionsWithThreadAffinity, [](const auto& v) { return v.second.expired(); }); //clean up dangling weak pointer
+                                done = true;
+                            });
+                            if (done)
+                                break;
+                            std::this_thread::yield(); //outside the lock
+                        }
                 }
-        }
+            });
+        });
     }
 
     struct SshSessionCache
@@ -1163,7 +1169,7 @@ std::vector<SftpItem> getDirContentFlat(const SftpLogin& login, const AfsPath& d
         if (rc == 0) //no more items
             return output;
 
-        const std::string_view sftpItemName = makeStringView(buf.data(), rc);
+        const std::string_view sftpItemName(buf.data(), rc);
 
         if (sftpItemName == "." || sftpItemName == "..") //check needed for SFTP, too!
             continue;
@@ -1317,14 +1323,31 @@ struct InputStreamSftp : public AFS::InputStream
         {
             session_ = getSharedSftpSession(login); //throw SysError
 
-            session_->executeBlocking("libssh2_sftp_open", //throw SysError, SysErrorSftpProtocol
-                                      [&](const SshSession::Details& sd) //noexcept!
+            auto retrieveOpenHandle = [&](unsigned long flags)
             {
-                fileHandle_ = ::libssh2_sftp_open(sd.sftpChannel, getLibssh2Path(filePath), LIBSSH2_FXF_READ, 0);
-                if (!fileHandle_)
-                    return std::min(::libssh2_session_last_errno(sd.sshSession), LIBSSH2_ERROR_SOCKET_NONE);
-                return LIBSSH2_ERROR_NONE;
-            });
+                session_->executeBlocking("libssh2_sftp_open", //throw SysError, SysErrorSftpProtocol
+                                          [&](const SshSession::Details& sd) //noexcept!
+                {
+                    fileHandle_ = ::libssh2_sftp_open(sd.sftpChannel, getLibssh2Path(filePath), flags, 0 /*mode*/);
+                    if (!fileHandle_)
+                        return std::min(::libssh2_session_last_errno(sd.sshSession), LIBSSH2_ERROR_SOCKET_NONE);
+
+                    return LIBSSH2_ERROR_NONE;
+                });
+            };
+
+            try
+            {
+                retrieveOpenHandle(LIBSSH2_FXF_READ); //throw SysError, SysErrorSftpProtocol
+            }
+            catch (const SysErrorSftpProtocol& e2)
+            {
+                //for Windows SFTP server we need fallback to "LIBSSH2_FXF_READ | LIBSSH2_FXF_WRITE": https://freefilesync.org/forum/viewtopic.php?t=13107
+                if (e2.sftpErrorCode == LIBSSH2_FX_PERMISSION_DENIED)
+                    retrieveOpenHandle(LIBSSH2_FXF_READ | LIBSSH2_FXF_WRITE); //throw SysError, SysErrorSftpProtocol
+                else
+                    throw;
+            }
         }
         catch (const SysError& e) { throw FileError(replaceCpy(_("Cannot open file %x."), L"%x", fmtPath(displayPath_)), e.toString()); }
     }
@@ -1737,7 +1760,7 @@ private:
         runSftpCommand(login_, "libssh2_sftp_realpath", //throw SysError, SysErrorSftpProtocol
         [&](const SshSession::Details& sd) { return rc = ::libssh2_sftp_realpath(sd.sftpChannel, sftpPath, buf.data(), bufSize); }); //noexcept!
 
-        const std::string_view sftpPathTrg = makeStringView(buf.data(), rc);
+        const std::string_view sftpPathTrg(buf.data(), rc);
         if (!startsWith(sftpPathTrg, '/'))
             throw SysError(replaceCpy<std::wstring>(L"Invalid path %x.", L"%x", fmtPath(utfTo<std::wstring>(sftpPathTrg))));
 
@@ -1806,7 +1829,7 @@ private:
 
     //symlink handling: follow
     //already existing: undefined behavior! (e.g. fail/overwrite/auto-rename)
-    FileCopyResult copyFileForSameAfsType(const AfsPath& sourcePath, const StreamAttributes& attrSource, //throw FileError, (ErrorFileLocked), X
+    FileCopyResult copyFileForSameAfsType(const AfsPath& sourcePath, const StreamAttributes& sourceAttr, //throw FileError, (ErrorFileLocked), X
                                           const AbstractPath& targetPath, bool copyFilePermissions, const IoCallback& notifyUnbufferedIO /*throw X*/) const override
     {
         //no native SFTP file copy => use stream-based file copy:
@@ -1814,7 +1837,7 @@ private:
             throw FileError(replaceCpy(_("Cannot write permissions of %x."), L"%x", fmtPath(AFS::getDisplayPath(targetPath))), _("Operation not supported by device."));
 
         //already existing: undefined behavior! (e.g. fail/overwrite/auto-rename)
-        return copyFileAsStream(sourcePath, attrSource, targetPath, notifyUnbufferedIO); //throw FileError, (ErrorFileLocked), X
+        return copyFileAsStream(sourcePath, sourceAttr, targetPath, notifyUnbufferedIO); //throw FileError, (ErrorFileLocked), X
     }
 
     //symlink handling: follow
@@ -2148,7 +2171,7 @@ AbstractPath fff::createItemPathSftp(const Zstring& itemPathPhrase) //noexcept
     trim(pathPhrase);
 
     if (startsWithAsciiNoCase(pathPhrase, sftpPrefix))
-        pathPhrase = pathPhrase.c_str() + strLength(sftpPrefix);
+        pathPhrase = pathPhrase.c_str() + strSize(sftpPrefix);
     trim(pathPhrase, TrimSide::left, [](Zchar c) { return c == Zstr('/') || c == Zstr('\\'); });
 
     const ZstringView credentials = beforeFirst<ZstringView>(pathPhrase, Zstr('@'), IfNotFoundReturn::none);
@@ -2162,7 +2185,7 @@ AbstractPath fff::createItemPathSftp(const Zstring& itemPathPhrase) //noexcept
     const ZstringView options  =  afterFirst(fullPathOpt, Zstr('|'), IfNotFoundReturn::none);
 
     auto it = std::find_if(fullPath.begin(), fullPath.end(), [](Zchar c) { return c == '/' || c == '\\'; });
-    const ZstringView serverPort = makeStringView(fullPath.begin(), it);
+    const ZstringView serverPort(fullPath.begin(), it);
     const AfsPath serverRelPath = sanitizeDeviceRelativePath({it, fullPath.end()});
 
     if (std::optional<std::pair<Zstring, int /*optional: port*/>> ip6AndPort = parseIpv6Address(serverPort)) //e.g. 2001:db8::ff00:42:8329 or [::1]:80

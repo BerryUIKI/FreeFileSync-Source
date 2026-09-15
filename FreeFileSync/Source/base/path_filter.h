@@ -3,13 +3,10 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef HARD_FILTER_H_825780275842758345
-#define HARD_FILTER_H_825780275842758345
+#pragma once
 
 #include <unordered_set>
 #include <zen/zstring.h>
-
 
 namespace fff
 {
@@ -90,6 +87,8 @@ private:
     {
     public:
         void insert(const Zstring& mask); //expected: upper-case + Unicode-normalized!
+
+        template <bool allowParentMatch>
         bool matches(const ZstringView relPath) const;
         bool matchesBegin(const ZstringView relPath) const;
 
@@ -107,8 +106,8 @@ private:
 
     private:
         std::set<Zstring> realMasks_; //always containing ? or *       (use std::set<> to scrap duplicates!)
-        std::unordered_set<Zstring, zen::StringHash, zen::StringEqual> relPaths_; //never containing ? or *
-        std::set<Zstring>                                              relPathsCmp_; //req. for operator<=> only :(
+        std::unordered_set<Zstring> relPaths_; //never containing ? or *
+        std::set<Zstring>           relPathsCmp_; //req. for operator<=> only :(
     };
 
     struct FilterSet
@@ -254,5 +253,3 @@ FilterRef constructFilter(const Zstring& includePhrase,
     }
 }
 }
-
-#endif //HARD_FILTER_H_825780275842758345

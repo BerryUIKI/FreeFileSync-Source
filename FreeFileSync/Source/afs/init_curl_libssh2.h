@@ -3,13 +3,10 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef INIT_CURL_LIBSSH2_H_4570285702375915765
-#define INIT_CURL_LIBSSH2_H_4570285702375915765
+#pragma once
 
 #include <memory>
 #include <zen/globals.h>
-
 
 namespace zen
 {
@@ -47,5 +44,3 @@ private:
     UniSessionCounter& sessionCount_;
 };
 }
-
-#endif //INIT_CURL_LIBSSH2_H_4570285702375915765

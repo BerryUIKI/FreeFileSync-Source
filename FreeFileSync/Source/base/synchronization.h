@@ -3,15 +3,12 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef SYNCHRONIZATION_H_8913470815943295
-#define SYNCHRONIZATION_H_8913470815943295
+#pragma once
 
 #include <chrono>
 #include "structures.h"
 #include "file_hierarchy.h"
 #include "process_callback.h"
-
 
 namespace fff
 {
@@ -99,5 +96,3 @@ void synchronize(const std::chrono::system_clock::time_point& syncStartTime,
                  WarningDialogs& warnings,
                  ProcessCallback& callback /*throw X*/); //throw X
 }
-
-#endif //SYNCHRONIZATION_H_8913470815943295

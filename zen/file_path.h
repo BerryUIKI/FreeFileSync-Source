@@ -3,12 +3,9 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef FILE_PATH_H_3984678473567247567
-#define FILE_PATH_H_3984678473567247567
+#pragma once
 
 #include "zstring.h"
-
 
 namespace zen
 {
@@ -56,5 +53,3 @@ std::optional<Zstring> getEnvironmentVar(const ZstringView name);
 
 
 }
-
-#endif //FILE_PATH_H_3984678473567247567

@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef VERSIONING_H_8760247652438056
-#define VERSIONING_H_8760247652438056
+#pragma once
 
 #include <functional>
 #include <zen/time.h>
@@ -13,7 +11,6 @@
 #include "structures.h"
 #include "algorithm.h"
 #include "../afs/abstract.h"
-
 
 namespace fff
 {
@@ -110,5 +107,3 @@ std::pair<time_t, Zstring> parseVersionedFileName  (const Zstring& fileName);
 time_t                     parseVersionedFolderName(const Zstring& folderName);
 }
 }
-
-#endif //VERSIONING_H_8760247652438056

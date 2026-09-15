@@ -3,12 +3,9 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef APPLICATION_H_18506781708176342677
-#define APPLICATION_H_18506781708176342677
+#pragma once
 
 #include <wx/app.h>
-
 
 namespace rts
 {
@@ -23,5 +20,3 @@ private:
     void onEnterEventLoop();
 };
 }
-
-#endif //APPLICATION_H_18506781708176342677

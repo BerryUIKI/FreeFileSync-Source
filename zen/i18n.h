@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef I18_N_H_3843489325044253425456
-#define I18_N_H_3843489325044253425456
+#pragma once
 
 #include "globals.h"
 #include "string_tools.h"
 #include "format_unit.h"
-
 
 //minimal layer enabling text translation - without platform/library dependencies!
 
@@ -111,5 +108,3 @@ bool languageLayoutIsRtl()
     return false;
 }
 }
-
-#endif //I18_N_H_3843489325044253425456

@@ -3,13 +3,10 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef CHOICE_ENUM_H_132413545345687
-#define CHOICE_ENUM_H_132413545345687
+#pragma once
 
 //#include <vector>
 #include <wx/choice.h>
-
 
 namespace zen
 {
@@ -113,5 +110,3 @@ void EnumDescrList<Enum>::updateTooltip()
     else assert(false);
 }
 }
-
-#endif //CHOICE_ENUM_H_132413545345687

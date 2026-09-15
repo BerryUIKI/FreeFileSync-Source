@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef FILER_TRAVERSER_H_127463214871234
-#define FILER_TRAVERSER_H_127463214871234
+#pragma once
 
 #include <functional>
 #include "file_error.h"
@@ -39,5 +37,3 @@ void traverseFolder(const Zstring& dirPath,
                     const std::function<void(const FolderInfo&  fi)>& onFolder,/*optional*/
                     const std::function<void(const SymlinkInfo& si)>& onSymlink/*optional*/); //throw FileError
 }
-
-#endif //FILER_TRAVERSER_H_127463214871234

@@ -11,8 +11,7 @@
 #include <zen/format_unit.h>
 #include <wx+/image_tools.h>
 #include <wx+/graph.h>
-#include <wx+/no_flicker.h>
-#include <wx+/window_layout.h>
+#include <wx+/window_tools.h>
 #include <zen/perf.h>
 #include <wx+/choice_enum.h>
 #include "wx+/taskbar.h"
@@ -32,9 +31,10 @@ namespace
 {
 constexpr std::chrono::seconds PERF_WINDOW_BYTES_PER_SEC  (4); //window size used for statistics
 constexpr std::chrono::seconds PERF_WINDOW_REMAINING_TIME(60); //USB memory stick can have 40-second-hangs
-constexpr std::chrono::seconds      SPEED_ESTIMATE_SAMPLE_SKIP(1);
+constexpr std::chrono::seconds      SPEED_ESTIMATE_STARTUP_SKIP(1);
 constexpr std::chrono::milliseconds SPEED_ESTIMATE_UPDATE_INTERVAL(500);
 constexpr std::chrono::seconds      GRAPH_TOTAL_TIME_UPDATE_INTERVAL(2);
+const double GRAPH_TOTAL_TIME_HYSTERESIS_FACTOR = 0.2;
 
 const size_t PROGRESS_GRAPH_SAMPLE_SIZE_MAX = 2'500'000; //sizeof(CurveDataStatistics::Sample) == 16 byte key/value
 
@@ -184,7 +184,6 @@ CompareProgressPanel::Impl::Impl(wxFrame& parentWindow) :
 
     //make sure standard height matches ProcessPhase::binaryCompare statistics layout (== largest)
 
-    //init graph
     m_panelProgressGraph->setAttributes(Graph2D::MainAttributes().setMinY(0).setMaxY(2).
                                         setLabelX(XLabelPos::none).
                                         setLabelY(YLabelPos::none).
@@ -389,7 +388,7 @@ void CompareProgressPanel::Impl::updateProgressGui(bool allowYield)
         {
             timeLastSpeedEstimate_ = timeElapsed;
 
-            if (numeric::dist(phaseStart_, timeElapsed) >= SPEED_ESTIMATE_SAMPLE_SKIP) //discard stats for first second: probably messy
+            if (numeric::dist(phaseStart_, timeElapsed) >= SPEED_ESTIMATE_STARTUP_SKIP) //skip stats at beginning: probably messy
             {
                 remTimeTest_.addSample(timeElapsed, itemsCurrent, bytesCurrent);
                 speedTest_  .addSample(timeElapsed, itemsCurrent, bytesCurrent);
@@ -659,7 +658,7 @@ class SyncProgressDialogImpl : public TopLevelDialog, public SyncProgressDialog
 {
 public:
     SyncProgressDialogImpl(long style, //wxFrame/wxDialog style
-                           const WindowLayout::Dimensions& dim,
+                           const WindowLayout::Rect& dlgRect,
                            const std::function<void()>& userRequestCancel,
                            const Statistics& syncStat,
                            wxFrame* parentFrame,
@@ -776,11 +775,11 @@ private:
         *pnl_.m_choicePostSyncAction, [this]
         {
             std::vector<EnumDescrList<PostSyncAction>::DescrItem> descr;
-            descr.push_back({PostSyncAction::none,     L"", {}});
+            descr.emplace_back(PostSyncAction::none, L"", L"");
             if (parentFrame_) //enable EXIT option for gui mode sync
-                descr.push_back({PostSyncAction::exit,     wxControl::RemoveMnemonics(_("E&xit")), {}});
-            descr.push_back({PostSyncAction::sleep,    _("System: Sleep"),     {}});
-            descr.push_back({PostSyncAction::shutdown, _("System: Shut down"), {}});
+                descr.emplace_back(PostSyncAction::exit, wxControl::RemoveMnemonics(_("E&xit")), L"");
+            descr.emplace_back(PostSyncAction::sleep,    _("System: Sleep"),     L"");
+            descr.emplace_back(PostSyncAction::shutdown, _("System: Shut down"), L"");
             return descr;
         }()
     };
@@ -789,7 +788,7 @@ private:
 
 template <class TopLevelDialog>
 SyncProgressDialogImpl<TopLevelDialog>::SyncProgressDialogImpl(long style, //wxFrame/wxDialog style
-                                                               const WindowLayout::Dimensions& dim,
+                                                               const WindowLayout::Rect& dlgRect,
                                                                const std::function<void()>& userRequestCancel,
                                                                const Statistics& syncStat,
                                                                wxFrame* parentFrame,
@@ -809,8 +808,8 @@ SyncProgressDialogImpl<TopLevelDialog>::SyncProgressDialogImpl(long style, //wxF
     if (!jobNames.empty())
     {
         tmp = jobNames[0];
-        std::for_each(jobNames.begin() + 1, jobNames.end(), [&](const std::wstring& jobName)
-        { tmp += L" + " + jobName; });
+        for (const std::wstring& jobName : std::span(jobNames.begin() + 1, jobNames.end()))
+            tmp += L" + " + jobName;
     }
     return tmp;
 }
@@ -868,7 +867,7 @@ syncStat_(&syncStat)
     //set std order after button visibility was set
     setStandardButtonLayout(*pnl_.bSizerStdButtons, StdButtons().setAffirmative(pnl_.m_buttonPause).setCancel(pnl_.m_buttonStop));
 
-    setImage(*pnl_.m_bpButtonMinimizeToTray, loadImage("minimize_to_tray"));
+    setButtonLabel(*pnl_.m_bpButtonMinimizeToTray, loadImage("minimize_to_tray"), dipToWxsize(4));
 
     setImage(*pnl_.m_bitmapItemStat, IconBuffer::genericFileIcon(IconBuffer::IconSize::small));
     setImage(*pnl_.m_bitmapTimeStat, loadImage("time", -1 /*maxWidth*/, IconBuffer::getPixSize(IconBuffer::IconSize::small)));
@@ -933,10 +932,8 @@ syncStat_(&syncStat)
     this->Show(); //GTK3 size calculation requires visible window: https://github.com/wxWidgets/wxWidgets/issues/16088
     //Hide(); -> avoids old position flash before Center() on GNOME but causes hang on KDE? https://freefilesync.org/forum/viewtopic.php?t=10103#p42404
 #endif
-    pnl_.Layout();
-    this->Center(); //call *after* dialog layout update and *before* wxWindow::Show()!
 
-    WindowLayout::setInitial(*this, dim, this->GetSize() /*defaultSize*/);
+    WindowLayout::setInitial(*this, dlgRect, this->GetSize() /*defaultSize*/);
 
     pnl_.m_buttonStop->SetDefault();
 
@@ -1221,7 +1218,7 @@ void SyncProgressDialogImpl<TopLevelDialog>::updateProgressGui(bool allowYield)
     {
         timeLastSpeedEstimate_ = timeElapsed;
 
-        if (numeric::dist(phaseStart_, timeElapsed) >= SPEED_ESTIMATE_SAMPLE_SKIP) //discard stats for first second: probably messy
+        if (numeric::dist(phaseStart_, timeElapsed) >= SPEED_ESTIMATE_STARTUP_SKIP) //skip stats at beginning: probably messy
         {
             remTimeTest_.addSample(timeElapsed, itemsCurrent, bytesCurrent);
             speedTest_  .addSample(timeElapsed, itemsCurrent, bytesCurrent);
@@ -1247,7 +1244,7 @@ void SyncProgressDialogImpl<TopLevelDialog>::updateProgressGui(bool allowYield)
             const double timeRemainingSec = remTimeSec ? *remTimeSec : 0;
             const double timeTotalSec = timeElapsedDouble + timeRemainingSec;
             //update estimated total time marker only with precision of "20% remaining time" to avoid needless jumping around:
-            if (numeric::dist(curveBytesEstim_.ref().getTotalTime(), timeTotalSec) > 0.2 * timeRemainingSec)
+            if (numeric::dist(curveBytesEstim_.ref().getTotalTime(), timeTotalSec) > GRAPH_TOTAL_TIME_HYSTERESIS_FACTOR * timeRemainingSec)
             {
                 //avoid needless flicker and don't update total time graph too often:
                 static_assert(std::chrono::duration_cast<std::chrono::milliseconds>(GRAPH_TOTAL_TIME_UPDATE_INTERVAL).count() % SPEED_ESTIMATE_UPDATE_INTERVAL.count() == 0);
@@ -1521,8 +1518,8 @@ void SyncProgressDialogImpl<TopLevelDialog>::showSummary(TaskResult syncResult, 
     const int imgListSize = dipToWxsize(16); //also required by GTK => don't use getMenuIconDipSize()
     auto imgList = std::make_unique<wxImageList>(imgListSize, imgListSize);
 
-    imgList->Add(toScaledBitmap(loadImage("progress", wxsizeToScreen(imgListSize))));
-    imgList->Add(toScaledBitmap(loadImage("log_file", wxsizeToScreen(imgListSize))));
+    imgList->Add(toDpiScaledBitmap(loadImage("progress", wxsizeToScreen(imgListSize))));
+    imgList->Add(toDpiScaledBitmap(loadImage("log_file", wxsizeToScreen(imgListSize))));
 
     pnl_.m_notebookResult->AssignImageList(imgList.release()); //pass ownership
 
@@ -1596,11 +1593,11 @@ auto SyncProgressDialogImpl<TopLevelDialog>::destroy(bool autoClose, bool restor
     //------------------------------------------------------------------------
     const bool autoCloseDialog = getOptionAutoCloseDialog();
 
-    const WindowLayout::Dimensions dims = WindowLayout::getBeforeClose(*this);
+    const WindowLayout::Rect dlgRect = WindowLayout::getBeforeClose(*this);
 
     this->Destroy(); //wxWidgets macOS: simple "delete"!!!!!!!
 
-    return {autoCloseDialog, dims};
+    return {autoCloseDialog, dlgRect};
 }
 
 
@@ -1714,7 +1711,7 @@ void SyncProgressDialogImpl<TopLevelDialog>::resumeFromSystray(bool userRequeste
 
 //########################################################################################
 
-SyncProgressDialog* SyncProgressDialog::create(const WindowLayout::Dimensions& dim,
+SyncProgressDialog* SyncProgressDialog::create(const WindowLayout::Rect& dlgRect,
                                                const std::function<void()>& userRequestCancel,
                                                const Statistics& syncStat,
                                                wxFrame* parentWindow, //may be nullptr
@@ -1728,12 +1725,12 @@ SyncProgressDialog* SyncProgressDialog::create(const WindowLayout::Dimensions& d
 {
     if (parentWindow) //FFS GUI sync
         return new SyncProgressDialogImpl<wxDialog>(wxDEFAULT_DIALOG_STYLE | wxMAXIMIZE_BOX | wxMINIMIZE_BOX | wxRESIZE_BORDER,
-                                                    dim, userRequestCancel, syncStat, parentWindow, showProgress,
+                                                    dlgRect, userRequestCancel, syncStat, parentWindow, showProgress,
                                                     autoCloseDialog, jobNames, syncStartTime, ignoreErrors, autoRetryCount, postSyncAction);
     else //FFS batch job
     {
         auto dlg = new SyncProgressDialogImpl<wxFrame>(wxDEFAULT_FRAME_STYLE,
-                                                       dim, userRequestCancel, syncStat, parentWindow, showProgress,
+                                                       dlgRect, userRequestCancel, syncStat, parentWindow, showProgress,
                                                        autoCloseDialog, jobNames, syncStartTime, ignoreErrors, autoRetryCount, postSyncAction);
         dlg->SetIcon(getFfsIcon()); //only top level windows should have an icon
         return dlg;

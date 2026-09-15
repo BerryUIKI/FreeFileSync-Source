@@ -3,16 +3,13 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef FOLDER_PAIR_H_89341750847252345
-#define FOLDER_PAIR_H_89341750847252345
+#pragma once
 
 #include <wx/event.h>
 #include <wx+/context_menu.h>
 #include <wx+/image_tools.h>
 #include <wx+/image_resources.h>
 #include "../base/norm_filter.h"
-
 
 namespace fff
 {
@@ -34,7 +31,7 @@ public:
         basicPanel_.m_bpButtonLocalSyncCfg ->Bind(wxEVT_RIGHT_DOWN, [this](wxMouseEvent& event) { onLocalSyncCfgContext  (event); });
         basicPanel_.m_bpButtonLocalFilter  ->Bind(wxEVT_RIGHT_DOWN, [this](wxMouseEvent& event) { onLocalFilterCfgContext(event); });
 
-        setImage(*basicPanel_.m_bpButtonRemovePair, loadImage("item_remove"));
+        setButtonLabel(*basicPanel_.m_bpButtonRemovePair, loadImage("item_remove"), 0 /*pad*/);
     }
 
 
@@ -55,17 +52,17 @@ private:
     {
         using namespace zen;
 
-        setImage(*basicPanel_.m_bpButtonLocalCompCfg, greyScaleIfDisabled(imgCmp_, !!localCmpCfg_));
+        setButtonLabel(*basicPanel_.m_bpButtonLocalCompCfg, greyScaleIfDisabled(imgCmp_, !!localCmpCfg_), 0 /*pad*/);
         basicPanel_.m_bpButtonLocalCompCfg->SetToolTip(localCmpCfg_ ?
                                                        _("Local comparison settings") +  L"\n(" + getVariantName(localCmpCfg_->compareVar) + L')' :
                                                        _("Local comparison settings"));
 
-        setImage(*basicPanel_.m_bpButtonLocalSyncCfg, greyScaleIfDisabled(imgSync_, !!localSyncCfg_));
+        setButtonLabel(*basicPanel_.m_bpButtonLocalSyncCfg, greyScaleIfDisabled(imgSync_, !!localSyncCfg_), 0 /*pad*/);
         basicPanel_.m_bpButtonLocalSyncCfg->SetToolTip(localSyncCfg_ ?
                                                        _("Local synchronization settings") +  L"\n(" + getVariantName(getSyncVariant(localSyncCfg_->directionCfg)) + L')' :
                                                        _("Local synchronization settings"));
 
-        setImage(*basicPanel_.m_bpButtonLocalFilter, greyScaleIfDisabled(imgFilter_, !isNullFilter(localFilter_)));
+        setButtonLabel(*basicPanel_.m_bpButtonLocalFilter, greyScaleIfDisabled(imgFilter_, !isNullFilter(localFilter_)), 0 /*pad*/);
         basicPanel_.m_bpButtonLocalFilter->SetToolTip(_("Local filter") + getFilterSummaryForTooltip(localFilter_));
     }
 
@@ -236,5 +233,3 @@ std::wstring getFilterSummaryForTooltip(const FilterConfig& filterCfg)
     return filterSummary;
 }
 }
-
-#endif //FOLDER_PAIR_H_89341750847252345

@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef FOLDER_SELECTOR_H_24857842375234523463425
-#define FOLDER_SELECTOR_H_24857842375234523463425
+#pragma once
 
 #include <zen/zstring.h>
 #include <wx/stattext.h>
@@ -13,7 +11,6 @@
 #include <wx+/file_drop.h>
 #include "folder_history_box.h"
 #include "../afs/abstract.h"
-
 
 namespace fff
 {
@@ -78,5 +75,3 @@ private:
 //abstract version of openWithDefaultApp()
 void openFolderInFileBrowser(const AbstractPath& folderPath); //throw FileError
 }
-
-#endif //FOLDER_SELECTOR_H_24857842375234523463425

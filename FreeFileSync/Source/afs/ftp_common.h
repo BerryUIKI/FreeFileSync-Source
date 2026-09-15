@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef FTP_COMMON_H_92889457091324321454
-#define FTP_COMMON_H_92889457091324321454
+#pragma once
 
 #include <zen/base64.h>
 #include <zen/string_tools.h>
 #include "abstract.h"
-
 
 namespace fff
 {
@@ -109,5 +106,3 @@ Zstring getServerRelPath(const AfsPath& itemPath)
         return Zstr('/') + itemPath.value;
 }
 }
-
-#endif //FTP_COMMON_H_92889457091324321454

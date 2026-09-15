@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef CUSTOM_GRID_H_8405817408327894
-#define CUSTOM_GRID_H_8405817408327894
+#pragma once
 
 #include <wx+/grid.h>
 #include "file_view.h"
 #include "../icon_buffer.h"
-
 
 namespace fff
 {
@@ -77,5 +74,3 @@ struct SyncDirectionEvent : public wxEvent
     const SyncDirection direction_;
 };
 }
-
-#endif //CUSTOM_GRID_H_8405817408327894

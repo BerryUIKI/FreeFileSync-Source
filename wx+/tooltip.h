@@ -3,13 +3,10 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef TOOLTIP_H_8912740832170515
-#define TOOLTIP_H_8912740832170515
+#pragma once
 
 #include <wx/window.h>
 #include <wx/image.h>
-
 
 namespace zen
 {
@@ -31,5 +28,3 @@ private:
     wxString lastUsedText_; //needed, considering "SetLabelText(textFixed)"
 };
 }
-
-#endif //TOOLTIP_H_8912740832170515

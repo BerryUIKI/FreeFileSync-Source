@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef TIME_H_8457092814324342453627
-#define TIME_H_8457092814324342453627
+#pragma once
 
 #include <ctime>
 #include "basic_math.h"
 #include "zstring.h"
-
 
 namespace zen
 {
@@ -82,7 +79,7 @@ std::tm toClibTimeComponents(const TimeComp& tc)
            1 <= tc.day    && tc.day    <= 31 &&
            0 <= tc.hour   && tc.hour   <= 23 &&
            0 <= tc.minute && tc.minute <= 59 &&
-           0 <= tc.second && tc.second <= 61);
+           0 <= tc.second && tc.second <= 60);
 
     return
     {
@@ -209,6 +206,7 @@ std::pair<time_t, bool /*success*/> utcToTimeT(const TimeComp& tc)
     std::tm ctc = impl::toClibTimeComponents(tc);
     ctc.tm_isdst = 0; //"Zero (0) to indicate that standard time is in effect" => unused by _mkgmtime, but take no chances
 
+    static_assert(sizeof(time_t) >= 8);
     /*  Windows: _mkgmtime() only works for years [1970, 3001]
         macOS: timegm() requires tm_year >= 1900; apparently no upper limit (tested until year 10.000!)
         Linux, 64-bit: apparently NO limits (tested years 0 to 10.000!)
@@ -277,7 +275,7 @@ Zstring formatTime(const Zchar* format, const TimeComp& tc)
     //strftime() craziness on invalid input:
     //  VS 2010: CRASH unless "_invalid_parameter_handler" is set: https://docs.microsoft.com/en-us/cpp/c-runtime-library/parameter-validation
     //  GCC: returns 0, apparently no crash. Still, considering some clib maintainer's comments, we should expect the worst!
-    //  Windows: avoid char-based strftime() which uses ANSI encoding! (e.g. Greek letters for AM/PM)
+    //  Windows: avoid char-based strftime() which uses ANSI encoding! (e.g. support Greek letters for AM/PM)
     const size_t charsWritten = std::strftime(buf.data(), buf.size(), format, &ctc);
     buf.resize(charsWritten);
     return buf;
@@ -291,7 +289,7 @@ TimeComp parseTime(const String& format, const String2& str)
     static_assert(std::is_same_v<CharType, GetCharTypeT<String2>>);
 
     const CharType*       itStr = strBegin(str);
-    const CharType* const strLast = itStr + strLength(str);
+    const CharType* const strLast = itStr + strSize(str);
 
     auto extractNumber = [&](int& result, size_t digitCount)
     {
@@ -301,7 +299,7 @@ TimeComp parseTime(const String& format, const String2& str)
         if (!std::all_of(itStr, itStr + digitCount, isDigit<CharType>))
             return false;
 
-        result = zen::stringTo<int>(makeStringView(itStr, digitCount));
+        result = zen::stringTo<int>(std::basic_string_view<CharType>(itStr, digitCount));
         itStr += digitCount;
         return true;
     };
@@ -309,7 +307,7 @@ TimeComp parseTime(const String& format, const String2& str)
     TimeComp output;
 
     const CharType*       itFmt = strBegin(format);
-    const CharType* const fmtLast = itFmt + strLength(format);
+    const CharType* const fmtLast = itFmt + strSize(format);
 
     for (; itFmt != fmtLast; ++itFmt)
     {
@@ -339,7 +337,7 @@ TimeComp parseTime(const String& format, const String2& str)
                     const char* months[] = {"jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"};
                     auto itMonth = std::find_if(std::begin(months), std::end(months), [&](const char* month)
                     {
-                        return equalAsciiNoCase(makeStringView(itStr, 3), month);
+                        return equalAsciiNoCase(std::basic_string_view<CharType>(itStr, 3), month);
                     });
                     if (itMonth == std::end(months))
                         return TimeComp();
@@ -417,5 +415,3 @@ Zstring formatTimeSpan(int64_t timeInSec, bool hourRequired)
     return timespanStr;
 }
 }
-
-#endif //TIME_H_8457092814324342453627

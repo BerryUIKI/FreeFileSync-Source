@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef DIR_EXIST_ASYNC_H_0817328167343215806734213
-#define DIR_EXIST_ASYNC_H_0817328167343215806734213
+#pragma once
 
 #include <zen/thread.h>
 #include "process_callback.h"
 #include "../afs/abstract.h"
-
 
 namespace fff
 {
@@ -78,7 +75,7 @@ FolderStatus getFolderStatusParallel(const std::set<AbstractPath>& folderPaths,
                 return futPassword.get(); //throw std::future_error -> if std::promise<Zstring> destroyed before password was set
             };
 
-            futAuth = runAsync([device /*clang bug*/= device, threadRequestPassword]
+            futAuth = runAsync([device, threadRequestPassword]
             {
                 setCurrentThreadName(Zstr("Auth: ") + utfTo<Zstring>(AFS::getDisplayPath(AbstractPath(device, AfsPath()))));
                 AFS::authenticateAccess(device, threadRequestPassword); //throw FileError, std::future_error
@@ -155,5 +152,3 @@ FolderStatus getFolderStatusParallel(const std::set<AbstractPath>& folderPaths,
 }
 }
 }
-
-#endif //DIR_EXIST_ASYNC_H_0817328167343215806734213

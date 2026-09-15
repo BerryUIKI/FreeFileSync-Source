@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef STATUS_HANDLER_H_81704805908341534
-#define STATUS_HANDLER_H_81704805908341534
+#pragma once
 
 #include <functional>
 #include "base/process_callback.h"
@@ -172,5 +170,3 @@ private:
 
 void delayAndCountDown(std::chrono::nanoseconds delay, const std::function<void(const std::wstring& timeRemMsg)>& notifyStatus);
 }
-
-#endif //STATUS_HANDLER_H_81704805908341534

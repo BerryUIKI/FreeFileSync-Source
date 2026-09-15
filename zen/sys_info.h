@@ -3,20 +3,16 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef SYSTEM_H_4189731847832147508915
-#define SYSTEM_H_4189731847832147508915
+#pragma once
 
 #include "file_error.h"
-
 
 namespace zen
 {
 //COM needs to be initialized before calling any of these functions! CoInitializeEx/CoUninitialize
 
 Zstring getLoginUser(); //throw FileError
-Zstring getUserDescription();//throw FileError
-
+Zstring getHostName(); //throw FileError
 
 struct ComputerModel
 {
@@ -27,7 +23,7 @@ ComputerModel getComputerModel(); //throw FileError
 
 
 
-std::wstring getOsDescription(); //throw FileError
+std::wstring getOsDescription();
 
 
 Zstring getProcessPath(); //throw FileError
@@ -39,5 +35,3 @@ Zstring getUserHome(); //throw FileError
 
 bool runningElevated(); //throw FileError
 }
-
-#endif //SYSTEM_H_4189731847832147508915

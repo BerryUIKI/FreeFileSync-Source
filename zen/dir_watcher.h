@@ -3,15 +3,12 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef DIR_WATCHER_348577025748023458
-#define DIR_WATCHER_348577025748023458
+#pragma once
 
 #include <vector>
 #include <chrono>
 #include <functional>
 #include "file_error.h"
-
 
 namespace zen
 {
@@ -68,5 +65,3 @@ private:
     const std::unique_ptr<Impl> pimpl_;
 };
 }
-
-#endif

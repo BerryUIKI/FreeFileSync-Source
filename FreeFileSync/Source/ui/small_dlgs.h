@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef SMALL_DLGS_H_8321790875018750245
-#define SMALL_DLGS_H_8321790875018750245
+#pragma once
 
 #include <wx+/popup_dlg.h>
 #include "../base/synchronization.h"
 #include "../config.h"
-
 
 namespace fff
 {
@@ -74,5 +71,3 @@ private:
 
 
 }
-
-#endif //SMALL_DLGS_H_8321790875018750245

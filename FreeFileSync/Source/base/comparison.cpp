@@ -1,4 +1,4 @@
-﻿// *****************************************************************************
+// *****************************************************************************
 // * This file is part of the FreeFileSync project. It is distributed under    *
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
@@ -272,7 +272,7 @@ FolderComparison ComparisonBuffer::execute(const std::vector<std::pair<ResolvedF
     std::vector<std::pair<ResolvedFolderPair, FolderPairCfg>> workLoadByContent;
     for (const auto& [folderPair, fpCfg] : workLoad)
         if (fpCfg.compareVar == CompareVariant::content)
-            workLoadByContent.push_back({folderPair, fpCfg});
+            workLoadByContent.emplace_back(folderPair, fpCfg);
 
     std::vector<SharedRef<BaseFolderPair>> outputByContent = compareByContent(workLoadByContent);
     auto itOByC = outputByContent.begin();
@@ -643,7 +643,7 @@ std::vector<SharedRef<BaseFolderPair>> ComparisonBuffer::compareByContent(const 
         //---------------------------------------------------------------
         const int64_t totalTimeSec = std::chrono::duration_cast<std::chrono::seconds>(compareTime.elapsed()).count();
 
-        cb_.logMessage(_("File contents compared:") + L' '  + formatNumber(itemsProcessed) + L" (" + formatFilesizeShort(bytesProcessed) + L") | " +
+        cb_.logMessage(_("Total data compared:") + L' '  + formatNumber(itemsProcessed) + L" (" + formatFilesizeShort(bytesProcessed) + L") | " +
                        _("Time elapsed:") + L' ' + utfTo<std::wstring>(formatTimeSpan(totalTimeSec)),
                        PhaseCallback::MsgType::info); //throw X
     }
@@ -837,13 +837,12 @@ void matchFolders(const MapType& mapLeft, const MapType& mapRight, ProcessLeftOn
                 if (!tryMatchRange(itCase, itEndCase))
                 {
                     const Zstringc& conflictMsg = getConflictAmbiguousItemName(itCase->ref->first);
-                    std::for_each(itCase, itEndCase, [&](const FileRef& fr)
-                    {
+
+                    for (const FileRef& fr : std::span(itCase, itEndCase))
                         if (fr.side == SelectSide::left)
                             lo(*fr.ref, &conflictMsg);
                         else
                             ro(*fr.ref, &conflictMsg);
-                    });
                 }
                 itCase = itEndCase;
             }
@@ -1190,7 +1189,7 @@ FolderComparison fff::compare(WarningDialogs& warnings,
     }
     catch (const std::bad_alloc& e)
     {
-        callback.reportFatalError(_("Out of memory.") + L' ' + utfTo<std::wstring>(e.what()));
+        callback.reportFatalError(_("Out of memory.") + L"\n\n" + utfTo<std::wstring>(e.what()));
         return {};
     }
 }

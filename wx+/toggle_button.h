@@ -3,13 +3,10 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef TOGGLE_BUTTON_H_8173024810574556
-#define TOGGLE_BUTTON_H_8173024810574556
+#pragma once
 
 #include <wx/bmpbuttn.h>
 #include <wx+/bitmap_button.h>
-
 
 namespace zen
 {
@@ -45,7 +42,7 @@ public:
     }
 
     void init(const wxImage& imgActive,
-              const wxImage& imgInactive);
+              const wxImage& imgInactive, int pad);
 
     void setActive(bool value);
     bool isActive() const { return active_; }
@@ -53,6 +50,7 @@ public:
 
 private:
     bool active_ = false;
+    int pad_ = 0;
     wxImage imgActive_;
     wxImage imgInactive_;
 };
@@ -66,12 +64,20 @@ private:
 //######################## implementation ########################
 inline
 void ToggleButton::init(const wxImage& imgActive,
-                        const wxImage& imgInactive)
+                        const wxImage& imgInactive, int pad)
 {
     imgActive_   = imgActive;
     imgInactive_ = imgInactive;
+    pad_         = pad;
 
-    setImage(*this, active_ ? imgActive_ : imgInactive_);
+    //ensure both images have same size to avoid "wobble" effect when toggling button:
+    const wxSize maxSize = getMaxSize(imgActive.GetSize(), imgInactive.GetSize());
+
+    if (imgActive_  .GetSize() != maxSize) imgActive_   = resizeCanvas(imgActive_,   maxSize, wxALIGN_CENTER);
+    if (imgInactive_.GetSize() != maxSize) imgInactive_ = resizeCanvas(imgInactive_, maxSize, wxALIGN_CENTER);
+
+    active_ = !active_;
+    setActive(!active_);
 }
 
 
@@ -81,9 +87,7 @@ void ToggleButton::setActive(bool value)
     if (active_ != value)
     {
         active_ = value;
-        setImage(*this, active_ ? imgActive_ : imgInactive_);
+        setButtonLabel(*this, active_ ? imgActive_ : imgInactive_, pad_);
     }
 }
 }
-
-#endif //TOGGLE_BUTTON_H_8173024810574556

@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef EXTRA_LOG_H_601673246392441846218957402563
-#define EXTRA_LOG_H_601673246392441846218957402563
+#pragma once
 
 #include "error_log.h"
 #include "thread.h"
@@ -47,7 +45,7 @@ private:
 inline constinit Global<Protected<ExtraLog>> globalExtraLog;
 
 template <class Function>
-auto accessExtraLog(Function fun)
+void accessExtraLog(Function fun)
 {
     globalExtraLog.setOnce([] { return std::make_unique<Protected<ExtraLog>>(); });
 
@@ -80,5 +78,3 @@ void logExtraError(const std::wstring& msg) //nothrow!
     impl::accessExtraLog([&](impl::ExtraLog& el) { el.logError(msg); });
 }
 }
-
-#endif //EXTRA_LOG_H_601673246392441846218957402563

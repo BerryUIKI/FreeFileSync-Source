@@ -3,16 +3,13 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef ICON_BUFFER_H_8425703245726394256
-#define ICON_BUFFER_H_8425703245726394256
+#pragma once
 
 #include <vector>
 #include <memory>
 #include <zen/zstring.h>
 #include <wx/image.h>
 #include "afs/abstract.h"
-
 
 namespace fff
 {
@@ -53,5 +50,3 @@ private:
 
 bool hasLinkExtension(const Zstring& filepath);
 }
-
-#endif //ICON_BUFFER_H_8425703245726394256

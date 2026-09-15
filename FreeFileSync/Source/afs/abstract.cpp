@@ -92,23 +92,24 @@ void AFS::traverseFolder(const AfsPath& folderPath, //throw FileError
 
 
 //already existing: undefined behavior! (e.g. fail/overwrite/auto-rename)
-AFS::FileCopyResult AFS::copyFileAsStream(const AfsPath& sourcePath, const StreamAttributes& attrSource, //throw FileError, ErrorFileLocked, X
+AFS::FileCopyResult AFS::copyFileAsStream(const AfsPath& sourcePath, const StreamAttributes& sourceAttr, //throw FileError, ErrorFileLocked, X
                                           const AbstractPath& targetPath, const IoCallback& notifyUnbufferedIO /*throw X*/) const
 {
     auto streamIn = getInputStream(sourcePath); //throw FileError, ErrorFileLocked
 
-    warn_static("maybe only call if deviating from attrSource!? support file append in progress")
+#warning("maybe only call tryGetAttributesFast() if deviating from sourceAttr!? support file append in progress")
+    //=> better: check modTime after size mismatch: if different => consider "success" (newer modTime will be seen by next sync)
 
-    StreamAttributes attrSourceNew = {};
+    StreamAttributes sourceAttrNew = {};
     //try to get the most current attributes if possible (input file might have changed after comparison!)
     if (std::optional<StreamAttributes> attr = streamIn->tryGetAttributesFast()) //throw FileError
-        attrSourceNew = *attr; //Native/MTP/Google Drive
+        sourceAttrNew = *attr; //Native/MTP/Google Drive
     else //use possibly stale ones:
-        attrSourceNew = attrSource; //SFTP/FTP
+        sourceAttrNew = sourceAttr; //SFTP/FTP
     //TODO: evaluate: consequences of stale attributes
 
     //already existing: undefined behavior! (e.g. fail/overwrite/auto-rename)
-    auto streamOut = getOutputStream(targetPath, attrSourceNew.fileSize, attrSourceNew.modTime); //throw FileError
+    auto streamOut = getOutputStream(targetPath, sourceAttrNew.fileSize, sourceAttrNew.modTime); //throw FileError
 
     int64_t totalBytesNotified = 0;
     IOCallbackDivider notifyIoDiv(notifyUnbufferedIO, totalBytesNotified);
@@ -126,10 +127,10 @@ AFS::FileCopyResult AFS::copyFileAsStream(const AfsPath& sourcePath, const Strea
     streamOut->getBlockSize() /*throw FileError*/); //throw FileError, ErrorFileLocked, X
 
     //check incomplete input *before* failing with (slightly) misleading error message in OutputStream::finalize()
-    if (streamSize != attrSourceNew.fileSize)
+    if (streamSize != sourceAttrNew.fileSize)
         throw FileError(replaceCpy(_("Cannot read file %x."), L"%x", fmtPath(getDisplayPath(sourcePath))),
                         _("Unexpected size of data stream:") + L' ' + formatNumber(streamSize) + L'\n' +
-                        _("Expected:") + L' ' + formatNumber(attrSourceNew.fileSize) + L" [unbufferedStreamCopy]");
+                        _("Expected:") + L' ' + formatNumber(sourceAttrNew.fileSize) + L" [unbufferedStreamCopy]");
 
     const FinalizeResult finResult = streamOut->finalize(notifyIoDiv); //throw FileError, X
 
@@ -144,9 +145,9 @@ AFS::FileCopyResult AFS::copyFileAsStream(const AfsPath& sourcePath, const Strea
                         _("Expected:") + L' ' + formatNumber(2 * streamSize) + L" [IOCallbackDivider]");
     return
     {
-        .fileSize        = attrSourceNew.fileSize,
-        .modTime         = attrSourceNew.modTime,
-        .sourceFilePrint = attrSourceNew.filePrint,
+        .fileSize        = sourceAttrNew.fileSize,
+        .modTime         = sourceAttrNew.modTime,
+        .sourceFilePrint = sourceAttrNew.filePrint,
         .targetFilePrint = finResult.filePrint,
         .errorModTime    = finResult.errorModTime,
         /* Failing to set modification time is not a fatal error from synchronization perspective (treat like external update)
@@ -160,7 +161,7 @@ AFS::FileCopyResult AFS::copyFileAsStream(const AfsPath& sourcePath, const Strea
 
 
 //already existing + no onDeleteTargetFile: undefined behavior! (e.g. fail/overwrite/auto-rename)
-AFS::FileCopyResult AFS::copyFileTransactional(const AbstractPath& sourcePath, const StreamAttributes& attrSource, //throw FileError, ErrorFileLocked, X
+AFS::FileCopyResult AFS::copyFileTransactional(const AbstractPath& sourcePath, const StreamAttributes& sourceAttr, //throw FileError, ErrorFileLocked, X
                                                const AbstractPath& targetPath,
                                                bool copyFilePermissions,
                                                bool transactionalCopy,
@@ -171,7 +172,7 @@ AFS::FileCopyResult AFS::copyFileTransactional(const AbstractPath& sourcePath, c
     {
         //caveat: typeid returns static type for pointers, dynamic type for references!!!
         if (typeid(sourcePath.afsDevice.ref()) == typeid(targetPathTmp.afsDevice.ref()))
-            return sourcePath.afsDevice.ref().copyFileForSameAfsType(sourcePath.afsPath, attrSource,
+            return sourcePath.afsDevice.ref().copyFileForSameAfsType(sourcePath.afsPath, sourceAttr,
                                                                      targetPathTmp, copyFilePermissions, notifyUnbufferedIO); //throw FileError, ErrorFileLocked, X
         //already existing: undefined behavior! (e.g. fail/overwrite/auto-rename)
 
@@ -181,7 +182,7 @@ AFS::FileCopyResult AFS::copyFileTransactional(const AbstractPath& sourcePath, c
                             _("Operation not supported between different devices."));
 
         //already existing: undefined behavior! (e.g. fail/overwrite/auto-rename)
-        return sourcePath.afsDevice.ref().copyFileAsStream(sourcePath.afsPath, attrSource, targetPathTmp, notifyUnbufferedIO); //throw FileError, ErrorFileLocked, X
+        return sourcePath.afsDevice.ref().copyFileAsStream(sourcePath.afsPath, sourceAttr, targetPathTmp, notifyUnbufferedIO); //throw FileError, ErrorFileLocked, X
     };
 
     if (transactionalCopy && !hasNativeTransactionalCopy(targetPath))
@@ -243,15 +244,11 @@ AFS::FileCopyResult AFS::copyFileTransactional(const AbstractPath& sourcePath, c
 
 void AFS::createFolderIfMissingRecursion(const AbstractPath& folderPath) //throw FileError
 {
-    auto getItemType2 = [&](const AbstractPath& itemPath) //throw FileError
+    auto getItemTypeImpl = [](const AbstractPath& itemPath) //throw SysError
     {
         try
         { return getItemType(itemPath); } //throw FileError
-        catch (const FileError& e) //need to add context!
-        {
-            throw FileError(replaceCpy(_("Cannot create directory %x."), L"%x", fmtPath(getDisplayPath(folderPath))),
-                            replaceCpy(e.toString(), L"\n\n", L'\n'));
-        }
+        catch (const FileError& e) { throw SysError(replaceCpy(e.toString(), L"\n\n", L'\n')); } //needs additional context!
     };
 
     try
@@ -260,22 +257,25 @@ void AFS::createFolderIfMissingRecursion(const AbstractPath& folderPath) //throw
         //- do NOT use getItemTypeIfExists()! race condition when multiple threads are calling createDirectoryIfMissingRecursion(): https://freefilesync.org/forum/viewtopic.php?t=10137#p38062
         //- find first existing + accessible parent folder (backwards iteration):
         AbstractPath folderPathEx = folderPath;
-        RingBuffer<Zstring> folderNames; //caveat: 1. might have been created in the meantime 2. getItemType2() may have failed with access error
+        RingBuffer<Zstring> folderNames; //caveat: 1. might have been created in the meantime 2. getItemTypeImpl() may have failed with access error
         for (;;)
-            try
-            {
-                if (getItemType2(folderPathEx) == ItemType::file /*obscure, but possible*/) //throw FileError
-                    throw SysError(replaceCpy(_("The name %x is already used by another item."), L"%x", fmtPath(getItemName(folderPathEx))));
-                break;
-            }
-            catch (FileError&) //not yet existing or access error
+        {
+            ItemType type;
+            try { type = getItemTypeImpl(folderPathEx); /*throw SysError*/ }
+            catch (SysError&) //not yet existing or access error
             {
                 const std::optional<AbstractPath> parentPath = getParentPath(folderPathEx);
                 if (!parentPath)//device root => quick access test
                     throw;
                 folderNames.push_front(getItemName(folderPathEx));
                 folderPathEx = *parentPath;
+                continue;
             }
+
+            if (type == ItemType::file /*obscure, but possible*/)
+                throw SysError(replaceCpy(_("The name %x is already used by another item."), L"%x", fmtPath(getItemName(folderPathEx))));
+            break;
+        }
         //-----------------------------------------------------------
 
         AbstractPath folderPathNew = folderPathEx;
@@ -286,18 +286,16 @@ void AFS::createFolderIfMissingRecursion(const AbstractPath& folderPath) //throw
 
                 createFolderPlain(folderPathNew); //throw FileError
             }
-            catch (FileError&)
+            catch (const FileError& e)
             {
-                try
-                {
-                    if (getItemType2(folderPathNew) == ItemType::file /*obscure, but possible*/) //throw FileError
-                        throw SysError(replaceCpy(_("The name %x is already used by another item."), L"%x", fmtPath(getItemName(folderPathNew))));
-                    else
-                        continue; //already existing => possible, if createDirectoryIfMissingRecursion() is run in parallel
-                }
-                catch (FileError&) {} //not yet existing or access error
+                ItemType type;
+                try { type = getItemTypeImpl(folderPathNew); /*throw SysError*/ }
+                //(not yet existing) or access error:
+                catch (const SysError& e2) { throw FileError(replaceCpy(e.toString(), L"\n\n", L'\n'), e2.toString()); }
 
-                throw;
+                if (type == ItemType::file /*obscure, but possible*/)
+                    throw SysError(replaceCpy(_("The name %x is already used by another item."), L"%x", fmtPath(getItemName(folderPathNew))));
+                //else: already existing => possible, if createDirectoryIfMissingRecursion() is run in parallel
             }
     }
     catch (const SysError& e)
@@ -313,7 +311,7 @@ void AFS::removeFolderIfExistsRecursion(const AfsPath& folderPath, //throw FileE
                                         const std::function<void(const std::wstring& displayPath)>& onBeforeSymlinkDeletion /*throw X*/, //optional; one call for each object!
                                         const std::function<void(const std::wstring& displayPath)>& onBeforeFolderDeletion  /*throw X*/) const
 {
-    std::function<void(const AfsPath& folderPath2)> removeFolderRecursionImpl;
+    std::function<void(const AfsPath& folderPath2)> removeFolderRecursionImpl; //"deducing this" would crash GCC 15.2 :(
     removeFolderRecursionImpl = [this, &onBeforeFileDeletion, &onBeforeSymlinkDeletion, &onBeforeFolderDeletion, &removeFolderRecursionImpl](const AfsPath& folderPath2) //throw FileError
     {
         std::vector<Zstring> folderNames;

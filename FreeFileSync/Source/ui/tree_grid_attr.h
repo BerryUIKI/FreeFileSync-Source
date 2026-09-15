@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef TREE_GRID_ATTR_H_83470918473021745
-#define TREE_GRID_ATTR_H_83470918473021745
+#pragma once
 
 #include <vector>
 #include <cassert>
 #include <wx+/dc.h>
-
 
 namespace fff
 {
@@ -61,5 +58,3 @@ bool getDefaultSortDirection(ColumnTypeOverview colType)
     return true;
 }
 }
-
-#endif //TREE_GRID_ATTR_H_83470918473021745

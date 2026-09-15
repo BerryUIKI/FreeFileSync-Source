@@ -20,20 +20,20 @@ using namespace fff; //required for correct overload resolution!
 namespace
 {
 //-------------------------------------------------------------------------------------------------------------------------------
-const int XML_FORMAT_GLOBAL_CFG = 27; //2023-05-13
+const int XML_FORMAT_GLOBAL_CFG = 28; //2025-09-25
 const int XML_FORMAT_SYNC_CFG   = 23; //2023-08-24
 //-------------------------------------------------------------------------------------------------------------------------------
 }
 
 
 const ExternalApp fff::extCommandFileManager
-//"xdg-open \"%parent_path%\"" -> not good enough: we need %local_path% for proper MTP/Google Drive handling
-{L"Show in file manager", "xdg-open \"$(dirname \"%local_path%\")\""};
+//"xdg-open %parent_path%" -> not good enough: we need %local_path% for proper MTP/Google Drive handling
+{L"Show in file manager", "xdg-open \"$(dirname %local_path%)\""};
 //mark for extraction: _("Show in file manager") Linux doesn't use the term "folder"
 
 
 const ExternalApp fff::extCommandOpenDefault
-{L"Open with default application", "xdg-open \"%local_path%\""};
+{L"Open with default application", "xdg-open %local_path%"};
 
 
 
@@ -1394,9 +1394,8 @@ void readConfig(const XmlIn& in, GlobalConfig& cfg, int formatVer)
     //TODO: remove old parameter after migration! 2021-03-06
     if (formatVer < 21)
     {
-        cfg.dpiLayouts[getDpiScalePercent()].progressDlg.size = wxSize();
-        in2["ProgressDialog"].attribute("Width",     cfg.dpiLayouts[getDpiScalePercent()].progressDlg.size->x);
-        in2["ProgressDialog"].attribute("Height",    cfg.dpiLayouts[getDpiScalePercent()].progressDlg.size->y);
+        in2["ProgressDialog"].attribute("Width",     cfg.dpiLayouts[getDpiScalePercent()].progressDlg.size.x);
+        in2["ProgressDialog"].attribute("Height",    cfg.dpiLayouts[getDpiScalePercent()].progressDlg.size.y);
         in2["ProgressDialog"].attribute("Maximized", cfg.dpiLayouts[getDpiScalePercent()].progressDlg.isMaximized);
     }
 
@@ -1460,10 +1459,9 @@ void readConfig(const XmlIn& in, GlobalConfig& cfg, int formatVer)
     //TODO: remove old parameter after migration! 2021-03-06
     if (formatVer < 21)
     {
-        cfg.dpiLayouts[getDpiScalePercent()].mainDlg.size = wxSize();
-        inMainWin.attribute("Width",     cfg.dpiLayouts[getDpiScalePercent()].mainDlg.size->x);
-        inMainWin.attribute("Height",    cfg.dpiLayouts[getDpiScalePercent()].mainDlg.size->y);
-        cfg.dpiLayouts[getDpiScalePercent()].mainDlg.pos  = wxPoint();
+        inMainWin.attribute("Width",     cfg.dpiLayouts[getDpiScalePercent()].mainDlg.size.x);
+        inMainWin.attribute("Height",    cfg.dpiLayouts[getDpiScalePercent()].mainDlg.size.y);
+        cfg.dpiLayouts[getDpiScalePercent()].mainDlg.pos = wxPoint();
         inMainWin.attribute("PosX",      cfg.dpiLayouts[getDpiScalePercent()].mainDlg.pos->x);
         inMainWin.attribute("PosY",      cfg.dpiLayouts[getDpiScalePercent()].mainDlg.pos->y);
         inMainWin.attribute("Maximized", cfg.dpiLayouts[getDpiScalePercent()].mainDlg.isMaximized);
@@ -1614,12 +1612,12 @@ void readConfig(const XmlIn& in, GlobalConfig& cfg, int formatVer)
         assert(!v.empty());
         perspective.clear();
 
-        std::for_each(v.begin(), v.end() - 1, [&](wxString& item)
+        for (wxString& item : std::span(v.begin(), v.end() - 1))
         {
             editItem(item);
             perspective += item;
             perspective += delim;
-        });
+        }
         editItem(v.back());
         perspective += v.back();
     };
@@ -1758,7 +1756,7 @@ void readConfig(const XmlIn& in, GlobalConfig& cfg, int formatVer)
         {
             trim(item.cmdLine);
             if (item.cmdLine == "xdg-open \"%parent_path%\"")
-                item.cmdLine = "xdg-open \"$(dirname \"%local_path%\")\"";
+                item.cmdLine = "xdg-open \"$(dirname %local_path%)\"";
         }
 
     //TODO: remove after migration! 2022-04-29
@@ -1766,6 +1764,27 @@ void readConfig(const XmlIn& in, GlobalConfig& cfg, int formatVer)
         for (ExternalApp& item : cfg.externalApps)
             if (item.description == L"Browse directory")
                 item.description = L"Show in file manager";
+
+    //TODO: remove after migration! 2025-09-25
+    if (formatVer < 28)
+        for (ExternalApp& item : cfg.externalApps)
+        {
+            trim(item.cmdLine);
+
+            auto removeQuotes = [&](const ZstringView macroName) { replace(item.cmdLine, Zstring() + Zstr('"') + macroName + Zstr('"'), macroName); };
+            removeQuotes(Zstr("%item_path%"));
+            removeQuotes(Zstr("%item_path2%"));
+            removeQuotes(Zstr("%item_paths%"));
+            removeQuotes(Zstr("%local_path%"));
+            removeQuotes(Zstr("%local_path2%"));
+            removeQuotes(Zstr("%local_paths%"));
+            removeQuotes(Zstr("%item_name%"));
+            removeQuotes(Zstr("%item_name2%"));
+            removeQuotes(Zstr("%item_names%"));
+            removeQuotes(Zstr("%parent_path%"));
+            removeQuotes(Zstr("%parent_path2%"));
+            removeQuotes(Zstr("%parent_paths%"));
+        }
 
     if (formatVer < 20) //TODO: remove old parameter after migration! 2020-12-03
     {
@@ -1795,13 +1814,12 @@ void readConfig(const XmlIn& in, GlobalConfig& cfg, int formatVer)
             if (formatVer < 26)
             {
                 XmlIn inLayoutMain = inLayout["MainDialog"];
-                layout.mainDlg.size = wxSize();
-                inLayoutMain.attribute("Width",     layout.mainDlg.size->x);
-                inLayoutMain.attribute("Height",    layout.mainDlg.size->y);
+                inLayoutMain.attribute("Width",  layout.mainDlg.size.x);
+                inLayoutMain.attribute("Height", layout.mainDlg.size.y);
 
                 layout.mainDlg.pos = wxPoint();
-                inLayoutMain.attribute("PosX",      layout.mainDlg.pos->x);
-                inLayoutMain.attribute("PosY",      layout.mainDlg.pos->y);
+                inLayoutMain.attribute("PosX", layout.mainDlg.pos->x);
+                inLayoutMain.attribute("PosY", layout.mainDlg.pos->y);
 
                 inLayoutMain.attribute("Maximized", layout.mainDlg.isMaximized);
 
@@ -1812,22 +1830,16 @@ void readConfig(const XmlIn& in, GlobalConfig& cfg, int formatVer)
                 inLayoutMain["FilePanelRight"](layout.fileColumnAttribsRight);
 
                 XmlIn inLayoutProgress = inLayout["ProgressDialog"];
-                layout.progressDlg.size = wxSize();
-                inLayoutProgress.attribute("Width",  layout.progressDlg.size->x);
-                inLayoutProgress.attribute("Height", layout.progressDlg.size->y);
+                inLayoutProgress.attribute("Width",  layout.progressDlg.size.x);
+                inLayoutProgress.attribute("Height", layout.progressDlg.size.y);
 
                 inLayoutProgress.attribute("Maximized", layout.progressDlg.isMaximized);
             }
             else
             {
                 XmlIn inLayoutMain = inLayout["MainWindow"];
-                if (inLayoutMain.hasAttribute("Width") &&
-                    inLayoutMain.hasAttribute("Height"))
-                {
-                    layout.mainDlg.size = wxSize();
-                    inLayoutMain.attribute("Width",  layout.mainDlg.size->x);
-                    inLayoutMain.attribute("Height", layout.mainDlg.size->y);
-                }
+                inLayoutMain.attribute("Width",  layout.mainDlg.size.x);
+                inLayoutMain.attribute("Height", layout.mainDlg.size.y);
                 if (inLayoutMain.hasAttribute("PosX") &&
                     inLayoutMain.hasAttribute("PosY"))
                 {
@@ -1838,13 +1850,8 @@ void readConfig(const XmlIn& in, GlobalConfig& cfg, int formatVer)
                 inLayoutMain.attribute("Maximized", layout.mainDlg.isMaximized);
 
                 XmlIn inLayoutProgress = inLayout["ProgressDialog"];
-                if (inLayoutProgress.hasAttribute("Width") &&
-                    inLayoutProgress.hasAttribute("Height"))
-                {
-                    layout.progressDlg.size = wxSize();
-                    inLayoutProgress.attribute("Width",  layout.progressDlg.size->x);
-                    inLayoutProgress.attribute("Height", layout.progressDlg.size->y);
-                }
+                inLayoutProgress.attribute("Width",  layout.progressDlg.size.x);
+                inLayoutProgress.attribute("Height", layout.progressDlg.size.y);
                 inLayoutProgress.attribute("Maximized", layout.progressDlg.isMaximized);
 
                 inLayout["Panels"        ](layout.panelLayout);
@@ -2282,11 +2289,8 @@ void writeConfig(const GlobalConfig& cfg, XmlOut& out)
         outLayout.attribute("Scale", numberTo<std::string>(scalePercent) + '%');
 
         XmlOut outLayoutMain = outLayout["MainWindow"];
-        if (layout.mainDlg.size)
-        {
-            outLayoutMain.attribute("Width",  layout.mainDlg.size->x);
-            outLayoutMain.attribute("Height", layout.mainDlg.size->y);
-        }
+        outLayoutMain.attribute("Width",  layout.mainDlg.size.x);
+        outLayoutMain.attribute("Height", layout.mainDlg.size.y);
         if (layout.mainDlg.pos)
         {
             outLayoutMain.attribute("PosX", layout.mainDlg.pos->x);
@@ -2295,11 +2299,8 @@ void writeConfig(const GlobalConfig& cfg, XmlOut& out)
         outLayoutMain.attribute("Maximized", layout.mainDlg.isMaximized);
 
         XmlOut outLayoutProgress = outLayout["ProgressDialog"];
-        if (layout.progressDlg.size)
-        {
-            outLayoutProgress.attribute("Width",  layout.progressDlg.size->x);
-            outLayoutProgress.attribute("Height", layout.progressDlg.size->y);
-        }
+        outLayoutProgress.attribute("Width",  layout.progressDlg.size.x);
+        outLayoutProgress.attribute("Height", layout.progressDlg.size.y);
         outLayoutProgress.attribute("Maximized", layout.progressDlg.isMaximized);
 
         outLayout["Panels"        ](layout.panelLayout);

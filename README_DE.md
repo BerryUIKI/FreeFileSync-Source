@@ -1,62 +1,147 @@
 # FreeFileSync
 
-[English](README.md) | [Deutsch German](README_DE.md) | [简体中文 Simplified Chinese](README_zh-CN.md) | [日本語 Japanese](README.md)
+[English](README.md) | [Deutsch](README_DE.md) | [简体中文](README_zh-CN.md) | [日本語](README_JP.md)
 
+[![Version](https://img.shields.io/badge/version-14.12-blue.svg)](https://freefilesync.org)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://freefilesync.org/download.php)
+[![C++ Standard](https://img.shields.io/badge/C%2B%2B-23-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B23)
 
 ## Einführung
-FreeFileSync ist ein umfassendes und leistungsstarkes Open-Source-Projekt, das sich auf Dateisynchronisierungs- und -sicherungslösungen konzentriert. Es zielt darauf ab, den Benutzern einen effizienten und zuverlässigen Weg zur Synchronisierung ihrer Dateien zwischen verschiedenen Speicherorten zu bieten und so die Datenkonsistenz und -integrität sicherzustellen.
 
-## Offizielle Website
-Die offizielle Website von FreeFileSync ist https://freefilesync.org . Sie können die Website besuchen, um die neuesten Informationen über das Projekt zu erhalten, die neueste Version der Software herunterzuladen und zusätzliche Ressourcen wie Dokumentation, Tutorials und Community-Support nutzen.
+**FreeFileSync** ist eine freie Open-Source-Software für Ordnervergleich und -synchronisation zur Sicherung wichtiger Dateien. Anstatt bei jedem Vorgang sämtliche Daten erneut zu kopieren, analysiert FreeFileSync die Unterschiede zwischen Quell- und Zielverzeichnis und überträgt lediglich die minimal erforderliche Datenmenge.
 
-## Dateien und Ordner synchronisieren
-Schlüsselfunktionen: FreeFileSync ist eine Software zur Ordnervergleichung und -synchronisierung, die Sicherungskopien aller wichtigen Dateien erstellt und verwaltet. Anstatt jede Datei jedes Mal zu kopieren, ermittelt FreeFileSync die Unterschiede zwischen einem Quell- und einem Zielordner und überträgt nur die minimale erforderliche Datenmenge. FreeFileSync ist Open-Source-Software und verfügbar für Windows, macOS und Linux.
+FreeFileSync ist plattformübergreifend für **Windows**, **macOS** und **Linux** verfügbar. Das Paket umfasst zudem **RealTimeSync**, ein Hilfswerkzeug zur Verzeichnisüberwachung und automatisierten Ausführung von Synchronisationsjobs bei erkannten Dateiänderungen.
+
+- **Offizielle Website**: [https://freefilesync.org](https://freefilesync.org)
+- **Downloads**: [https://freefilesync.org/download.php](https://freefilesync.org/download.php)
+- **Quellcode-Repository**: [https://github.com/BerryUIKI/FreeFileSync-Source](https://github.com/BerryUIKI/FreeFileSync-Source)
+
+---
 
 ## Funktionen
-- **Plattformübergreifende Kompatibilität**: FreeFileSync-Source ist so konzipiert, dass es nahtlos auf mehreren Betriebssystemen funktioniert, darunter Windows, Linux und macOS. Dadurch können Benutzer Dateien zwischen verschiedenen Plattformen problemlos synchronisieren.
-- **Flexible Synchronisierungsmodi**: Es bietet verschiedene Synchronisierungsmodi, um den unterschiedlichen Bedürfnissen der Benutzer gerecht zu werden. Egal, ob Sie eine Einweg-Synchronisierung, eine Zweiweg-Synchronisierung oder eine Spiegelung durchführen möchten, FreeFileSync-Source hat alles, was Sie benötigen.
-- **Benutzerfreundliche Benutzeroberfläche**: Das Projekt verfügt über eine intuitive und einfach zu bedienende grafische Benutzeroberfläche (GUI), die es Benutzern ermöglicht, Synchronisierungstasks einfach zu konfigurieren, Zeitpläne einzurichten und den Fortschritt der Dateiübertragung zu überwachen.
-- **Erweiterte Filteroptionen**: Sie können spezifische Regeln und Filter definieren, um bestimmte Dateien oder Verzeichnisse aus dem Synchronisierungsprozess auszuschließen oder einzuschließen. Dadurch haben Sie eine feingranulare Kontrolle darüber, was synchronisiert wird und was nicht.
-- **Inkrementelle Synchronisierung**: FreeFileSync-Source verwendet inkrementelle Synchronisierungstechniken, um den Datentransfer zu minimieren und die für die Synchronisierung benötigte Zeit zu reduzieren. Nur die seit der letzten Synchronisierung vorgenommenen Änderungen werden übertragen, was Bandbreite spart und die Leistung verbessert.
 
-## Installation
+- **Plattformübergreifend**: Läuft nativ auf Windows, macOS und Linux.
+- **Flexible Synchronisationsmodi**: Unterstützt Zwei-Wege-, Spiegelungs-, Aktualisierungs- sowie vollständig benutzerdefinierte Synchronisation.
+- **Vielseitige Protokolle**: Nahtlose Synchronisation mit lokalen Laufwerken, Netzwerkfreigaben (SMB), SFTP (SSH File Transfer Protocol), FTP/FTPS und Google Drive.
+- **Hohe Performance**: Mehrfädige Verzeichnisabtastung und optimierte Binärdatenbanken für effiziente inkrementelle Abgleiche.
+- **Konflikt- und Fehlerbehandlung**: Umfassende Konflikterkennung, automatische Wiederholungsversuche und ausfallsichere Kopiermechanismen.
+- **Automatisierung**: Stapelverarbeitung über die Befehlszeile sowie automatisierte Ordnerüberwachung via RealTimeSync.
+- **Erweiterte Filterung**: Ein- und Ausschlussregeln basierend auf Platzhaltern, Dateiänderungszeit, Dateigröße und regulären Ausdrücken.
+- **Datensicherheit**: Versionierung zur Aufbewahrung älterer Dateistände in gesonderten Ordnern oder im Papierkorb.
+
+---
+
+## Aus dem Quellcode erstellen
+
 ### Voraussetzungen
-- [Auflisten aller notwendigen Software oder Bibliotheken, die vor der Verwendung von FreeFileSync-Source installiert werden müssen, z. B. eine bestimmte Version eines Compilers oder eine Laufzeitumgebung.]
 
-### Schritte
-1. **Den Quellcode herunterladen**: Sie können den Quellcode von FreeFileSync-Source aus dem offiziellen Repository herunterladen [Repository-Link hier angeben].
-2. **Den Code kompilieren**:
-   - Navigieren Sie zum heruntergeladenen Quellcodedverzeichnis.
-   - Befolgen Sie die Kompilierungsanweisungen, die in der `README`- oder `INSTALL`-Datei im Quellcode enthalten sind. Dies kann das Ausführen spezifischer Befehle mit einem Build-Tool wie `make` oder `CMake` beinhalten.
-3. **Die Anwendung installieren**:
-   - Sobald die Kompilierung erfolgreich abgeschlossen ist, können Sie die Anwendung installieren, indem Sie das entsprechende Installationsskript ausführen oder die plattformspezifischen Installationsanweisungen befolgen.
+Zur Übersetzung wird ein moderner C++23-Compiler sowie gängige Entwicklungsbibliotheken benötigt:
+
+- **Compiler**: GCC 13+ oder Clang 17+ mit C++23-Unterstützung (`-std=c++23`)
+- **wxWidgets**: Version 3.2 oder neuer (`wx-config` mit `std`, `aui`, `richtext`)
+- **GTK+**: GTK 3.0 Header (`gtk+-3.0`)
+- **Netzwerk & Kryptographie**:
+  - OpenSSL (`openssl`)
+  - libcurl (`libcurl`)
+  - libssh2 (`libssh2`)
+  - libidn2 (`libidn2`)
+- **Kompression**: zlib
+- **SELinux** *(optional)*: `libselinux`
+
+#### Abhängigkeiten unter Linux (Debian / Ubuntu) installieren
+
+```bash
+sudo apt update
+sudo apt install build-essential \
+    libwxgtk3.2-dev \
+    libgtk-3-dev \
+    libcurl4-openssl-dev \
+    libssh2-1-dev \
+    libssl-dev \
+    libidn2-dev \
+    zlib1g-dev
+```
+
+*(Fedora / RHEL):*
+```bash
+sudo dnf install gcc-c++ wxGTK3-devel gtk3-devel libcurl-devel libssh2-devel openssl-devel libidn2-devel zlib-devel
+```
+
+### Bauanleitung
+
+1. **Repository klonen**:
+   ```bash
+   git clone https://github.com/BerryUIKI/FreeFileSync-Source.git
+   cd FreeFileSync-Source
+   ```
+
+2. **FreeFileSync kompilieren**:
+   ```bash
+   cd FreeFileSync/Source
+   make -j$(nproc)
+   ```
+
+3. **RealTimeSync kompilieren** *(optional)*:
+   ```bash
+   cd RealTimeSync
+   make -j$(nproc)
+   ```
+
+Nach Abschluss der Übersetzung liegen die Binärdateien in den jeweiligen Verzeichnissen bereit.
+
+---
 
 ## Verwendung
-### Konfigurieren eines Synchronisierungstasks
-1. Starten Sie FreeFileSync-Source.
-2. Klicken Sie auf die Schaltfläche "Neu", um einen neuen Synchronisierungstask zu erstellen.
-3. Geben Sie im Task-Konfigurationsfenster die Quell- und Zielordner für die Synchronisierung an.
-4. Wählen Sie den gewünschten Synchronisierungsmodus aus und konfigurieren Sie zusätzliche Optionen, wie z. B. Filterregeln oder Zeitpläne.
-5. Klicken Sie auf "OK", um die Task-Konfiguration zu speichern.
 
-### Ausführen eines Synchronisierungstasks
-1. Wählen Sie den Synchronisierungstask aus der Task-Liste aus, den Sie ausführen möchten.
-2. Klicken Sie auf die Schaltfläche "Ausführen", um den Synchronisierungsprozess zu starten.
-3. Überwachen Sie den Fortschritt der Synchronisierung im Statusfenster.
+### Grafische Oberfläche
+1. Starten Sie `FreeFileSync`.
+2. Wählen Sie Quell- und Zielordner aus oder ziehen Sie diese per Drag & Drop in die Ordnerfelder.
+3. Passen Sie die Vergleichsmethode (Dateizeit und -größe, Inhalt oder Dateigröße) sowie die Synchronisationsrichtung an.
+4. Klicken Sie auf **Vergleichen** und anschließend auf **Synchronisieren**.
+
+### RealTimeSync
+1. Starten Sie `RealTimeSync`.
+2. Legen Sie die zu überwachenden Verzeichnisse sowie eine Leerlaufzeit fest.
+3. Hinterlegen Sie den Befehlsaufruf für die gespeicherte FreeFileSync-Batchdatei (`.ffs_batch`).
+4. Klicken Sie auf **Start**, um die Überwachung im Infobereich zu starten.
+
+---
 
 ## Mitwirken
-Wir begrüßen Beiträge aus der Open-Source-Community, um die Verbesserung von FreeFileSync-Source zu unterstützen. Wenn Sie gerne beitragen möchten, folgen Sie diesen Schritten:
-1. Forken Sie das Repository auf GitHub.
-2. Erstellen Sie einen neuen Branch für Ihre Funktion oder Fehlerbehebung.
-3. Führen Sie Ihre Änderungen durch und committen Sie sie mit beschreibenden Commit-Nachrichten.
-4. Pushen Sie Ihre Änderungen in Ihr geforktes Repository.
-5. Stellen Sie einen Pull-Request an das Hauptrepository, in dem Sie den Zweck und die Details Ihrer Änderungen erklären.
+
+Beiträge aus der Open-Source-Community sind stets willkommen:
+
+1. Forken Sie das Repository unter [https://github.com/BerryUIKI/FreeFileSync-Source](https://github.com/BerryUIKI/FreeFileSync-Source).
+2. Erstellen Sie einen Feature-Branch (`git checkout -b feature/mein-beitrag`).
+3. Führen Sie Ihre Änderungen durch und committen Sie diese mit einer aussagekräftigen Nachricht.
+4. Pushen Sie Ihren Branch in Ihren Fork (`git push origin feature/mein-beitrag`).
+5. Öffnen Sie einen Pull Request mit einer Beschreibung der Änderungen.
+
+---
 
 ## Lizenz
-FreeFileSync-Source ist unter der [Lizenzname]-Lizenz lizenziert. Weitere Details finden Sie in der `LICENSE`-Datei, die im Quellcode enthalten ist.
 
-## Support
-Wenn Sie Probleme haben oder Fragen zu FreeFileSync-Source haben, können Sie gerne ein Issue im GitHub-Repository eröffnen oder sich an unser Support-Team unter [Support-E-Mail-Adresse] wenden.
+FreeFileSync wird für den privaten Gebrauch unter der **GNU General Public License v3.0 (GPLv3)** bereitgestellt; für den kommerziellen und behördlichen Einsatz gelten die Bestimmungen der FreeFileSync Business Edition.
 
-## Danksagungen
-Wir möchten uns bei allen Mitwirkenden und Benutzern von FreeFileSync-Source für ihre Unterstützung und Feedback bedanken. Ihre Beiträge helfen, dieses Projekt noch besser zu machen.
+Vollständige Lizenzbedingungen finden sich in [LICENSE](LICENSE) und [License.txt](License.txt), inklusive der Lizenzen eingebundener Bibliotheken:
+- **wxWidgets**: wxWindows Library Licence 3.1
+- **OpenSSL**: OpenSSL License / SSLeay License
+- **libcurl**: curl License (MIT-Stil)
+- **libssh2**: libssh2 License (BSD 3-Clause)
+- **PuTTY**: PuTTY Licence (MIT-Stil)
+
+---
+
+## Support & Hilfe
+
+- **Offizielles Forum**: [https://freefilesync.org/forum/](https://freefilesync.org/forum/)
+- **Häufig gestellte Fragen (FAQ)**: [https://freefilesync.org/faq.php](https://freefilesync.org/faq.php)
+- **Handbuch & Anleitungen**: [https://freefilesync.org/manual.php](https://freefilesync.org/manual.php)
+- **Repository-Issues**: [https://github.com/BerryUIKI/FreeFileSync-Source/issues](https://github.com/BerryUIKI/FreeFileSync-Source/issues)
+
+---
+
+## Danksagung
+
+Ein besonderer Dank gilt Zenju und der gesamten FreeFileSync-Community für die Entwicklung und Pflege dieser Software sowie allen Übersetzern und Nutzern weltweit.

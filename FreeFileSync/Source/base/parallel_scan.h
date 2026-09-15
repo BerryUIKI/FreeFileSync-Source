@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef PARALLEL_SCAN_H_924588904275284572857
-#define PARALLEL_SCAN_H_924588904275284572857
+#pragma once
 
 #include <map>
 #include <set>
@@ -14,7 +12,6 @@
 #include "structures.h"
 #include "file_hierarchy.h"
 #include "process_callback.h"
-
 
 namespace fff
 {
@@ -50,5 +47,3 @@ std::map<DirectoryKey, DirectoryValue> parallelFolderScan(const std::set<Directo
                                                           const TravErrorCb& onError, const TravStatusCb& onStatusUpdate, //NOT optional
                                                           std::chrono::milliseconds cbInterval);
 }
-
-#endif //PARALLEL_SCAN_H_924588904275284572857

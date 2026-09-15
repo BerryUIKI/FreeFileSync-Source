@@ -3,15 +3,12 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef FILE_IO_H_89578342758342572345
-#define FILE_IO_H_89578342758342572345
+#pragma once
 
 #include "file_access.h"
 #include "serialize.h"
 #include "crc.h"
 #include "guid.h"
-
 
 namespace zen
 {
@@ -177,5 +174,3 @@ Zstring getPathWithTempName(const Zstring& filePath) //generate (hopefully) uniq
 //overwrites if existing + transactional! :)
 void setFileContent(const Zstring& filePath, const std::string_view bytes, const IoCallback& notifyUnbufferedIO /*throw X*/); //throw FileError, X
 }
-
-#endif //FILE_IO_H_89578342758342572345

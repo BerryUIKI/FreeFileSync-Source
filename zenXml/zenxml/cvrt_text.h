@@ -3,13 +3,10 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef CVRT_TEXT_H_018727339083427097434
-#define CVRT_TEXT_H_018727339083427097434
+#pragma once
 
 #include <chrono>
 #include <zen/string_tools.h>
-
 
 namespace zen
 {
@@ -105,14 +102,11 @@ template <class T>
 struct IsChronoDuration
 {
 private:
-    using Yes = char[1];
-    using No  = char[2];
-
     template <class Rep, class Period>
-    static Yes& isDuration(std::chrono::duration<Rep, Period>);
-    static  No& isDuration(...);
+    static std::true_type  isDuration(std::chrono::duration<Rep, Period>);
+    static std::false_type isDuration(...);
 public:
-    enum { value = sizeof(isDuration(std::declval<T>())) == sizeof(Yes) };
+    static constexpr bool value = decltype(isDuration(std::declval<T>()))::value;
 };
 
 
@@ -127,12 +121,11 @@ enum class TextType
 };
 
 template <class T>
-struct GetTextType : std::integral_constant<TextType,
-    std::is_same_v<T, bool>    ? TextType::boolean :
-    isStringLike<T>           ? TextType::string : //string before number to correctly handle char/wchar_t -> this was an issue with Loki only!
-    isArithmetic<T>           ? TextType::number : //
-    IsChronoDuration<T>::value ? TextType::chrono :
-    TextType::other> {};
+constexpr TextType getTextType = std::is_same_v<T, bool> ? TextType::boolean :
+                                 isStringLike<T>            ? TextType::string : //string before number to correctly handle char/wchar_t -> this was an issue with Loki only!
+                                 isArithmetic<T>            ? TextType::number : //
+                                 IsChronoDuration<T>::value ? TextType::chrono :
+                                 TextType::other;
 
 //######################################################################################
 
@@ -237,15 +230,13 @@ struct ConvertText<T, TextType::other>
 template <class T> inline
 void writeText(const T& value, std::string& output)
 {
-    ConvertText<T, GetTextType<T>::value>().writeText(value, output);
+    ConvertText<T, getTextType<T>>().writeText(value, output);
 }
 
 
 template <class T> inline
 bool readText(const std::string& input, T& value)
 {
-    return ConvertText<T, GetTextType<T>::value>().readText(input, value);
+    return ConvertText<T, getTextType<T>>().readText(input, value);
 }
 }
-
-#endif //CVRT_TEXT_H_018727339083427097434

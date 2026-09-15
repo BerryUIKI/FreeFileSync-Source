@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef MAIN_DLG_H_2384790842252445
-#define MAIN_DLG_H_2384790842252445
+#pragma once
 
 #include "gui_generated.h"
 //#include <vector>
@@ -15,7 +13,6 @@
 #include <wx+/file_drop.h>
 //#include <wx/timer.h>
 #include "folder_selector2.h"
-
 
 namespace rts
 {
@@ -71,5 +68,3 @@ private:
     const zen::SharedRef<std::function<void()>> onBeforeSystemShutdownCookie_ = zen::makeSharedRef<std::function<void()>>([this] { onBeforeSystemShutdown(); });
 };
 }
-
-#endif //MAIN_DLG_H_2384790842252445

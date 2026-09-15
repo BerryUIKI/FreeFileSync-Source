@@ -1,25 +1,31 @@
 CXX ?= g++
 exeName = FreeFileSync_$(shell arch)
 
-CXXFLAGS += -std=c++23 -pipe -DWXINTL_NO_GETTEXT_MACRO -I../.. -I../../zenXml -include "zen/i18n.h" -include "zen/warn_static.h" \
+CXXFLAGS += -std=c++23 -pipe -DWXINTL_NO_GETTEXT_MACRO -I../.. -I../../zenXml -include "zen/i18n.h" \
            -Wall -Wfatal-errors -Wmissing-include-dirs -Wswitch-enum -Wcast-align -Wnon-virtual-dtor -Wno-unused-function -Wshadow -Wno-maybe-uninitialized \
-           -O3 -DNDEBUG `wx-config --cxxflags --debug=no` -pthread
+           -O3 -DNDEBUG -pthread
 
-LDFLAGS += -s `wx-config --libs std, aui, richtext --debug=no` -pthread
+LDFLAGS += -s -pthread
 
+
+CXXFLAGS += `wx-config --cxxflags --debug=no`
+LDFLAGS  += `wx-config --libs std, aui, richtext --debug=no`
 
 CXXFLAGS += `pkg-config --cflags openssl`
 LDFLAGS  += `pkg-config --libs openssl`
 
 CXXFLAGS += `pkg-config --cflags libcurl`
-LDFLAGS  += `pkg-config --libs libcurl` -lidn2
+LDFLAGS  += `pkg-config --libs libcurl`
+
+CXXFLAGS += `pkg-config --cflags libidn2`
+LDFLAGS  += `pkg-config --libs libidn2`
 
 CXXFLAGS += `pkg-config --cflags libssh2`
 LDFLAGS  += `pkg-config --libs libssh2`
 
-CXXFLAGS += `pkg-config --cflags gtk+-2.0`
+CXXFLAGS += `pkg-config --cflags gtk+-3.0`
 #treat as system headers so that warnings are hidden:
-CXXFLAGS += -isystem/usr/include/gtk-2.0
+CXXFLAGS += -isystem/usr/include/gtk-3.0
 
 #support for SELinux (optional)
 SELINUX_EXISTING=$(shell pkg-config --exists libselinux && echo YES)

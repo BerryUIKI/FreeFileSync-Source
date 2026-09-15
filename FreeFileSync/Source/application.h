@@ -3,16 +3,13 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
+#pragma once
 
-#ifndef APPLICATION_H_081568741942010985702395
-#define APPLICATION_H_081568741942010985702395
-
-#include <vector>
+//#include <vector>
 #include <zen/zstring.h>
 #include <wx/app.h>
 #include "config.h"
 #include "return_codes.h"
-
 
 namespace fff //avoid name clash with "int ffs()" for fuck's sake! (maxOS, Linux issue only: <string> internally includes <strings.h>, WTF!)
 {
@@ -31,5 +28,3 @@ private:
     FfsExitCode exitCode_ = FfsExitCode::success;
 };
 }
-
-#endif //APPLICATION_H_081568741942010985702395

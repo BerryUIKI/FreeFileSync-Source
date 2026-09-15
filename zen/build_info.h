@@ -3,10 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef BUILD_INFO_H_5928539285603428657
-#define BUILD_INFO_H_5928539285603428657
-
+#pragma once
 
 
 namespace zen
@@ -30,5 +27,3 @@ static_assert((BuildArch::program == BuildArch::bit32 ? 32 : 64) == sizeof(void*
 constexpr const char* cpuArchName = BuildArch::program == BuildArch::bit32 ? "i686": "x86-64";
 
 }
-
-#endif //BUILD_INFO_H_5928539285603428657

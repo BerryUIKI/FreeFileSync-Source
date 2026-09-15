@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef SYS_ERROR_H_3284791347018951324534
-#define SYS_ERROR_H_3284791347018951324534
+#pragma once
 
 #include "scope_guard.h" //
 #include "i18n.h"        //not used by this header, but the "rest of the world" needs it!
@@ -13,9 +11,7 @@
 #include "extra_log.h"   //
 
     #include <glib.h>
-    #undef G_GNUC_UNUSED //defined in glib.h: clashes with idn2.h
     #include <cerrno>
-
 
 namespace zen
 {
@@ -83,5 +79,3 @@ bool validateBool(int) = delete; //catch unintended bool conversions, e.g. HRESU
     { if (!zen::impl::validateBool(expr))        \
             throw zen::SysError(L"Assertion failed: \"" L ## exprStr L"\""); }
 }
-
-#endif //SYS_ERROR_H_3284791347018951324534

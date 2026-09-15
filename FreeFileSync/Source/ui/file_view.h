@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef GRID_VIEW_H_9285028345703475842569
-#define GRID_VIEW_H_9285028345703475842569
+#pragma once
 
 #include <vector>
 #include <variant>
@@ -13,7 +11,6 @@
 #include <zen/stl_tools.h>
 #include "file_grid_attr.h"
 #include "../base/file_hierarchy.h"
-
 
 namespace fff
 {
@@ -159,5 +156,3 @@ private:
     std::optional<SortInfo> currentSort_;
 };
 }
-
-#endif //GRID_VIEW_H_9285028345703475842569

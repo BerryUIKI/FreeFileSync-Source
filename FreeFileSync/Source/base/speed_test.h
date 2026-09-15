@@ -3,15 +3,12 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef PERF_CHECK_H_87804217589312454
-#define PERF_CHECK_H_87804217589312454
+#pragma once
 
 #include <chrono>
 #include <optional>
 #include <string>
 #include <zen/ring_buffer.h>
-
 
 namespace fff
 {
@@ -43,5 +40,3 @@ private:
     zen::RingBuffer<Sample> samples_;
 };
 }
-
-#endif //PERF_CHECK_H_87804217589312454

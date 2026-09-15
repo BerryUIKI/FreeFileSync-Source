@@ -1,4 +1,4 @@
-﻿// *****************************************************************************
+// *****************************************************************************
 // * This file is part of the FreeFileSync project. It is distributed under    *
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
@@ -7,6 +7,7 @@
 #include "application.h"
 #include <memory>
 #include <zen/file_access.h>
+#include <zen/json.h>
 #include <zen/shutdown.h>
 #include <zen/process_exec.h>
 #include <zen/resolve_path.h>
@@ -33,16 +34,38 @@ using namespace fff;
 
 
 #ifdef __WXGTK3__
-    /* Wayland backend used by GTK3 does not allow to move windows! (no such issue on GTK2)
+GLOBAL_RUN_ONCE(
+    /*  GTK requires the DISPLAY variable: "11:21:06: Error: Unable to initialize GTK+, is DISPLAY set properly?"
+        https://askubuntu.com/questions/432255/what-is-the-display-environment-variable
 
-    "I'd really like to know if there is some deep technical reason for it or
-    if this is really as bloody stupid as it seems?" - vadz  https://github.com/wxWidgets/wxWidgets/issues/18733#issuecomment-1011235902
+        => might be missing when running FreeFileSync via cron as root
+        => sometimes it's DISPLAY=:1 or DISPLAY=:0.0 https://freefilesync.org/forum/viewtopic.php?t=9178
+        => alternative: --display=:0.0 (for gtk init: overrides the DISPLAY  environment variable)          */
+    const char* displEnv = ::getenv("DISPLAY"); //no extended error reporting
+    if (!displEnv || ::strlen(displEnv) == 0)
+    if (::setenv("DISPLAY", ":0", true /*overwrite*/) != 0)
+        logExtraError(_("Error during process initialization.") + L"\n\n" + formatSystemError("setenv(DISPLAY, :0)", getLastError()));
+        /* CAREFUL: "Modifications of environment variables are not allowed in multi-threaded programs" - https://rachelbythebay.com/w/2017/01/30/env/
+        => luckily we're not multi-threaded (yet)! */
 
-    Show all available GTK backends: run FreeFileSync with env variable:    GDK_BACKEND=help
+        //--------------------------------------------------------------------------
+        /* Wayland backend used by GTK3 does not allow to move windows!
 
-    => workaround: https://docs.gtk.org/gdk3/func.set_allowed_backends.html           */
-    GLOBAL_RUN_ONCE(::gdk_set_allowed_backends("x11,*")); //call *before* gtk_init()
+        "I'd really like to know if there is some deep technical reason for it or
+         if this is really as bloody stupid as it seems?" - vadz  https://github.com/wxWidgets/wxWidgets/issues/18733#issuecomment-1011235902
+
+        Show all available GTK backends: run FreeFileSync with env variable:    GDK_BACKEND=help
+
+        => workaround: https://docs.gtk.org/gdk3/func.set_allowed_backends.html           */
+        ::gdk_set_allowed_backends("x11,*"); //call *before* gtk_init()
+
+        //--------------------------------------------------------------------------
+        //workaround for lost mouse scrolling events when moving at the same time: https://bugs.kde.org/show_bug.cgi?id=348270
+        if (::setenv("GDK_CORE_DEVICE_EVENTS", "1", true /*overwrite*/) != 0)
+            logExtraError(_("Error during process initialization.") + L"\n\n" + formatSystemError("setenv(GDK_CORE_DEVICE_EVENTS, 1)", getLastError()));
+        );
 #endif
+
 
 IMPLEMENT_APP(Application)
 
@@ -89,7 +112,7 @@ void showSyntaxHelp()
 
 void notifyAppError(const std::wstring& msg)
 {
-        std::cerr << utfTo<std::string>(_("Error") + L": " + msg) + '\n';
+        std::cerr << utfTo<std::string>(_("Error") + L": " + msg) << '\n';
     //alternative0: std::wcerr: cannot display non-ASCII at all, so why does it exist???
     //alternative1: wxSafeShowMessage => NO console output on Debian x86, WTF!
     //alternative2: wxMessageBox() => works, but we probably shouldn't block during command line usage
@@ -125,21 +148,6 @@ bool Application::OnInit()
     catch (const FileError& e) { logExtraError(e.toString()); } //not critical in this context
 
     //GTK should already have been initialized by wxWidgets (see \src\gtk\app.cpp:wxApp::Initialize)
-#if GTK_MAJOR_VERSION == 2
-    ::gtk_rc_parse(appendPath(getResourceDirPath(), "Gtk2Styles.rc").c_str());
-
-    //hang on Ubuntu 19.10 (GLib 2.62) caused by ibus initialization: https://freefilesync.org/forum/viewtopic.php?t=6704
-    //=> work around 1: bonus: avoid needless DBus calls: https://developer.gnome.org/gio/stable/running-gio-apps.html
-    //                  drawback: missing MTP and network links in folder picker: https://freefilesync.org/forum/viewtopic.php?t=6871
-    //if (::setenv("GIO_USE_VFS", "local", true /*overwrite*/) != 0)
-    //    std::cerr << utfTo<std::string>(formatSystemError("setenv(GIO_USE_VFS)", errno)) + '\n';
-    //    //BUGZ!?: "Modifications of environment variables are not allowed in multi-threaded programs" - https://rachelbythebay.com/w/2017/01/30/env/
-
-    //=> work around 2:
-    [[maybe_unused]] GVfs* defaultFs = ::g_vfs_get_default(); //not owned by us!
-    //no such issue on GTK3!
-
-#elif GTK_MAJOR_VERSION == 3
     auto loadCSS = [&](const char* fileName)
     {
         GtkCssProvider* provider = ::gtk_css_provider_new();
@@ -171,9 +179,6 @@ bool Application::OnInit()
         }
         catch (const SysError& e2) { logExtraError(_("Failed to update the color theme.") + L"\n\n" + e2.toString()); }
     }
-#else
-#error unknown GTK version!
-#endif
 
     /* we're a GUI app: ignore SIGHUP when the parent terminal quits! (or process is killed!)
         => the FFS launcher will still be killed => fine
@@ -208,7 +213,7 @@ bool Application::OnInit()
     //- log off: Windows/macOS generates wxEVT_QUERY_END_SESSION/wxEVT_END_SESSION
     //           Linux/macOS generates SIGTERM, which we handle below
     //- Windows sends WM_QUERYENDSESSION, WM_ENDSESSION during log off, *not* WM_CLOSE https://devblogs.microsoft.com/oldnewthing/20080421-00/?p=22663
-    //   => taskkill sending WM_CLOSE (without /f) is a misguided app simulating a button-click on X
+    //   => "taskkill sending WM_CLOSE (without /f)" is a misguided app simulating a button-click on X
     //      -> should send WM_QUERYENDSESSION instead!
     if (auto /*sighandler_t n.a. on macOS*/ oldHandler = ::signal(SIGTERM, onSystemShutdown);//"graceful" exit requested, unlike SIGKILL
         oldHandler == SIG_ERR)
@@ -222,18 +227,6 @@ bool Application::OnInit()
 }
 
 
-int Application::OnExit()
-{
-    [[maybe_unused]] const bool rv = wxClipboard::Get()->Flush(); //see wx+/context_menu.h
-    //assert(rv); -> fails if clipboard wasn't used
-    localizationCleanup();
-    imageResourcesCleanup();
-    teardownAfs();
-    colorThemeCleanup();
-    return wxApp::OnExit();
-}
-
-
 wxLayoutDirection Application::GetLayoutDirection() const { return languageLayoutIsRtl() ? wxLayout_RightToLeft : wxLayout_LeftToRight; }
 
 
@@ -242,12 +235,24 @@ int Application::OnRun()
 #if wxUSE_EXCEPTIONS
 #error why is wxWidgets uncaught exception handling enabled!?
 #endif
+    //exception? => Windows: let it crash and create mini dump!!! Linux/macOS: std::exception::what() logged to console
 
-    //exception => Windows: let it crash and create mini dump!!! Linux/macOS: std::exception::what() logged to console
         [[maybe_unused]] const int rc = wxApp::OnRun();
     return static_cast<int>(exitCode_);
 }
 
+
+int Application::OnExit()
+{
+        [[maybe_unused]] const bool rv = wxClipboard::Get()->Flush(); //see wx+/context_menu.h
+        //assert(rv); -> fails if clipboard wasn't used
+        localizationCleanup();
+        imageResourcesCleanup();
+        teardownAfs(); //bad_alloc possible when compressing large GDrive metadata stream
+        colorThemeCleanup();
+        return wxApp::OnExit();
+
+}
 
 
 
@@ -409,7 +414,7 @@ void Application::onEnterEventLoop()
             try
             {
                 bool cfgFileExists = true;
-                try { cfgFileExists  = itemExists(globalCfgFilePath); /*throw FileError*/ } //=> unclear which exception is more relevant/useless:
+                try { cfgFileExists = itemExists(globalCfgFilePath); /*throw FileError*/ } //=> unclear which exception is more relevant/useless:
                 catch (const FileError& e2) { throw FileError(replaceCpy(e.toString(), L"\n\n", L'\n'), replaceCpy(e2.toString(), L"\n\n", L'\n')); }
 
                 if (cfgFileExists)
@@ -493,7 +498,7 @@ void Application::runBatchMode(const FfsBatchConfig& batchCfg, const Zstring& cf
 
     const std::chrono::system_clock::time_point syncStartTime = std::chrono::system_clock::now();
 
-    const WindowLayout::Dimensions progressDim
+    const WindowLayout::Rect progDlgRect
     {
         globalCfg.dpiLayouts[getDpiScalePercent()].progressDlg.size,
         std::nullopt /*pos*/,
@@ -509,7 +514,7 @@ void Application::runBatchMode(const FfsBatchConfig& batchCfg, const Zstring& cf
                                      batchCfg.guiCfg.mainCfg.autoRetryDelay,
                                      globalCfg.soundFileSyncFinished,
                                      globalCfg.soundFileAlertPending,
-                                     progressDim,
+                                     progDlgRect,
                                      batchCfg.batchExCfg.autoCloseSummary,
                                      batchCfg.batchExCfg.postBatchAction,
                                      batchCfg.batchExCfg.batchErrorHandling);
@@ -675,8 +680,8 @@ void Application::runBatchMode(const FfsBatchConfig& batchCfg, const Zstring& cf
     //---------------------------------------------------------------------------
     const BatchStatusHandler::DlgOptions dlgOpt = statusHandler.showResult();
 
-    globalCfg.dpiLayouts[getDpiScalePercent()].progressDlg.size        = dlgOpt.dim.size; //=> ignore dim.pos
-    globalCfg.dpiLayouts[getDpiScalePercent()].progressDlg.isMaximized = dlgOpt.dim.isMaximized;
+    globalCfg.dpiLayouts[getDpiScalePercent()].progressDlg.size        = dlgOpt.dlgRect.size; //=> ignore dlgOpt.pos
+    globalCfg.dpiLayouts[getDpiScalePercent()].progressDlg.isMaximized = dlgOpt.dlgRect.isMaximized;
 
     //----------------------------------------------------------------------
     switch (r.summary.result)
@@ -692,6 +697,35 @@ void Application::runBatchMode(const FfsBatchConfig& batchCfg, const Zstring& cf
         raiseExitCode(exitCode_, FfsExitCode::error);
     else if (logStats.warnings > 0)
         raiseExitCode(exitCode_, FfsExitCode::warning);
+
+    //---------------------------------------------------------------------------
+    //stream sync stats to STDOUT as JSON
+    JsonValue syncStats(JsonValue::Type::object);
+    switch (r.summary.result)
+    {
+        case TaskResult::success:   syncStats.objectVal.set("syncResult", "success"); break;
+        case TaskResult::warning:   syncStats.objectVal.set("syncResult", "warning"); break;
+        case TaskResult::error:     syncStats.objectVal.set("syncResult", "error"); break;
+        case TaskResult::cancelled: syncStats.objectVal.set("syncResult", "cancelled"); break;
+    }
+
+    std::string startTimeStr = utfTo<std::string>(formatTime(Zstr("%Y-%m-%dT%H:%M:%S%z"), getLocalTime(std::chrono::system_clock::to_time_t(r.summary.startTime))));
+    syncStats.objectVal.set("startTime", std::move(startTimeStr.insert(startTimeStr.size() - 2, ":"))); //ISO 8601 date/time with offset e.g. 2001-08-23T14:55:02+02:00
+
+    syncStats.objectVal.set("totalTimeSec", std::chrono::duration_cast<std::chrono::seconds>(r.summary.totalTime).count());
+
+    syncStats.objectVal.set("errors",   logStats.errors);
+    syncStats.objectVal.set("warnings", logStats.warnings);
+
+    syncStats.objectVal.set("totalItems", r.summary.statsTotal.items);
+    syncStats.objectVal.set("totalBytes", r.summary.statsTotal.bytes);
+
+    syncStats.objectVal.set("processedItems", r.summary.statsProcessed.items);
+    syncStats.objectVal.set("processedBytes", r.summary.statsProcessed.bytes);
+
+    syncStats.objectVal.set("logFile", utfTo<std::string>(AFS::getDisplayPath(logFilePath)));
+
+    std::cout << serializeJson(syncStats);
 
     //---------------------------------------------------------------------------
     try //save global settings to XML: e.g. ignored warnings, last sync stats

@@ -3,16 +3,13 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef TRIPLE_SPLITTER_H_8257804292846842573942534254
-#define TRIPLE_SPLITTER_H_8257804292846842573942534254
+#pragma once
 
 #include <cassert>
 #include <memory>
 #include <optional>
 #include <wx/window.h>
 #include <wx/bitmap.h>
-
 
 /* manage three contained windows:
      1. left and right window are stretched
@@ -78,5 +75,3 @@ private:
     std::optional<wxBitmap> doubleBuffer_;
 };
 }
-
-#endif //TRIPLE_SPLITTER_H_8257804292846842573942534254

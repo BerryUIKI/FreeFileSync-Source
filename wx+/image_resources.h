@@ -3,13 +3,10 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef IMAGE_RESOURCES_H_8740257825342532457
-#define IMAGE_RESOURCES_H_8740257825342532457
+#pragma once
 
 #include <wx/image.h>
 #include <zen/zstring.h>
-
 
 namespace zen
 {
@@ -17,8 +14,6 @@ namespace zen
 void imageResourcesInit(const Zstring& zipPath); //throw FileError
 void imageResourcesCleanup();
 
-const wxImage& loadImage(const std::string& name, int maxWidth /*optional*/, int maxHeight /*optional*/);
-const wxImage& loadImage(const std::string& name, int maxSize = -1);
+const wxImage& loadImage(const std::string_view name, int maxWidth /*optional*/, int maxHeight /*optional*/);
+const wxImage& loadImage(const std::string_view name, int maxSize = -1);
 }
-
-#endif //IMAGE_RESOURCES_H_8740257825342532457

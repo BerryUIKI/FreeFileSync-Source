@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef MULTI_RENAME_H_489572039485723453425
-#define MULTI_RENAME_H_489572039485723453425
+#pragma once
 
 #include <string>
 #include <zen/stl_tools.h>
@@ -19,5 +17,3 @@ const std::vector<std::wstring> resolvePlaceholderPhrase(const std::wstring_view
 
 bool isRenamePlaceholderChar(wchar_t c);
 }
-
-#endif //MULTI_RENAME_H_489572039485723453425

@@ -102,7 +102,7 @@ FolderSelector::FolderSelector(wxWindow*         parent,
     if (dropWindow2_)
         setupDragDrop(*dropWindow2_);
 
-    setImage(selectAltFolderButton_, loadImage("cloud_small"));
+    setButtonLabel(selectAltFolderButton_, loadImage("cloud_small"), 0 /*pad*/);
 
     //keep folderSelector and dirpath synchronous
     folderComboBox_       .Bind(wxEVT_MOUSEWHEEL,                &FolderSelector::onMouseWheel,          this);

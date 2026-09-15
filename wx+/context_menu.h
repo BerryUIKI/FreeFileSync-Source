@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef CONTEXT_MENU_H_18047302153418174632141234
-#define CONTEXT_MENU_H_18047302153418174632141234
+#pragma once
 
 #include <vector>
 #include <functional>
@@ -13,7 +11,6 @@
 #include <wx/clipbrd.h>
 #include <wx/menu.h>
 #include "dc.h"
-
 
 /*  A context menu supporting lambda callbacks!
 
@@ -28,7 +25,7 @@ namespace zen
 inline
 void setImage(wxMenuItem& menuItem, const wxImage& img)
 {
-    menuItem.SetBitmap(toScaledBitmap(img));
+    menuItem.SetBitmap(toDpiScaledBitmap(img));
 }
 
 
@@ -88,7 +85,7 @@ public:
     {
         //eventually all events from submenu items will be received by the parent menu
         for (const auto& [itemId, command] : commandList_)
-            menu_->Bind(wxEVT_COMMAND_MENU_SELECTED, [command /*clang bug*/= command](wxCommandEvent& event) { command(); }, itemId);
+            menu_->Bind(wxEVT_COMMAND_MENU_SELECTED, [command](wxCommandEvent& event) { command(); }, itemId);
 
         wnd.PopupMenu(menu_.get(), pos);
         wxTheApp->ProcessPendingEvents(); //make sure lambdas are evaluated before going out of scope;
@@ -159,5 +156,3 @@ std::optional<wxString> getClipboardText()
     return std::nullopt;
 }
 }
-
-#endif //CONTEXT_MENU_H_18047302153418174632141234

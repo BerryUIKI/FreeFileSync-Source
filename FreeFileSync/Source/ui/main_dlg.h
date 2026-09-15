@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef MAIN_DLG_H_8910481324545644545
-#define MAIN_DLG_H_8910481324545644545
+#pragma once
 
 //#include <memory>
 #include <wx/aui/aui.h>
@@ -21,7 +19,6 @@
 //#include "../status_handler.h"
 #include "../base/algorithm.h"
 #include "../base/synchronization.h"
-
 
 namespace fff
 {
@@ -366,5 +363,3 @@ private:
     const zen::SharedRef<std::function<void()>> onBeforeSystemShutdownCookie_ = zen::makeSharedRef<std::function<void()>>([this] { onBeforeSystemShutdown(); });
 };
 }
-
-#endif //MAIN_DLG_H_8910481324545644545

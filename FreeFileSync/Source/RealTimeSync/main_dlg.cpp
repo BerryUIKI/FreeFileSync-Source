@@ -8,7 +8,7 @@
 #include <wx/wupdlock.h>
 #include <wx/filedlg.h>
 #include <wx+/bitmap_button.h>
-#include <wx+/window_layout.h>
+#include <wx+/window_tools.h>
 #include <wx+/popup_dlg.h>
 #include <wx+/image_resources.h>
 #include <zen/file_access.h>
@@ -75,7 +75,7 @@ public:
         FolderGenerated(parent),
         folderSelector_(parent, *this, *m_buttonSelectFolder, *m_txtCtrlDirectory, folderLastSelected, nullptr /*staticText*/, getDroppedPathsFilter(mainDlg))
     {
-        setImage(*m_bpButtonRemoveFolder, loadImage("item_remove"));
+        setButtonLabel(*m_bpButtonRemoveFolder, loadImage("item_remove"), 0 /*pad*/);
     }
 
     void setPath(const Zstring& dirpath) { folderSelector_.setPath(dirpath); }
@@ -104,7 +104,7 @@ MainDialog::MainDialog(const Zstring& cfgFilePath) :
     m_scrolledWinFolders->SetScrollRate(scrollDelta, scrollDelta);
 
     m_txtCtrlDirectoryMain->SetMinSize({dipToWxsize(300), -1});
-    setDefaultWidth(*m_spinCtrlDelay);
+    fixSpinCtrl(*m_spinCtrlDelay);
 
     m_bpButtonRemoveTopFolder->Hide();
     m_panelMainFolder->Layout();
@@ -113,9 +113,9 @@ MainDialog::MainDialog(const Zstring& cfgFilePath) :
     setImage(*m_bitmapFolders, fff::IconBuffer::genericDirIcon(fff::IconBuffer::IconSize::small));
     setImage(*m_bitmapConsole, loadImage("command_line", dipToScreen(20)));
 
-    setImage(*m_bpButtonAddFolder,       loadImage("item_add"));
-    setImage(*m_bpButtonRemoveTopFolder, loadImage("item_remove"));
-    setBitmapTextLabel(*m_buttonStart, loadImage("start_rts"), m_buttonStart->GetLabelText(), dipToWxsize(5), dipToWxsize(8));
+    setButtonLabel(*m_bpButtonAddFolder,       loadImage("item_add"   ), 0 /*pad*/);
+    setButtonLabel(*m_bpButtonRemoveTopFolder, loadImage("item_remove"), 0 /*pad*/);
+    setButtonLabel(*m_buttonStart,             loadImage("start_rts"), m_buttonStart->GetLabelText());
 
     Bind(wxEVT_CHAR_HOOK, [this](wxKeyEvent& event) { onLocalKeyEvent(event); });
 
@@ -165,8 +165,6 @@ MainDialog::MainDialog(const Zstring& cfgFilePath) :
 
     onSystemShutdownRegister(onBeforeSystemShutdownCookie_);
 
-    Center(); //needs to be re-applied after a dialog size change! (see addFolder() within setConfiguration())
-
     if (startWatchingImmediately) //start watch mode directly
     {
         wxCommandEvent dummy2(wxEVT_COMMAND_BUTTON_CLICKED);
@@ -175,6 +173,13 @@ MainDialog::MainDialog(const Zstring& cfgFilePath) :
     }
     else
     {
+        //GetSizer()->SetSizeHints(this); //~=Fit() + SetMinSize() => already called by setConfiguration() -> insertAddFolder()
+#ifdef __WXGTK3__
+        Show(); //GTK3 size calculation requires visible window: https://github.com/wxWidgets/wxWidgets/issues/16088
+        //Hide(); -> avoids old position flash before Center() on GNOME but causes hang on KDE? https://freefilesync.org/forum/viewtopic.php?t=10103#p42404
+#endif
+        Center(); //apply *after* dialog size change!
+
         Show();
         m_buttonStart->SetFocus(); //don't "steal" focus if program is running from sys-tray"
     }
@@ -257,7 +262,15 @@ void MainDialog::onStart(wxCommandEvent& event)
             break;
     }
 
+    //need to center in case of "startWatchingImmediately"
+#ifdef __WXGTK3__
+    Show(); //GTK3 size calculation requires visible window: https://github.com/wxWidgets/wxWidgets/issues/16088
+    //Hide(); -> avoids old position flash before Center() on GNOME but causes hang on KDE? https://freefilesync.org/forum/viewtopic.php?t=10103#p42404
+#endif
+    Center(); //apply *after* dialog size change!
+
     Show(); //don't show for CancelReason::requestExit
+
     Raise();
     m_buttonStart->SetFocus();
 }
@@ -442,11 +455,11 @@ void MainDialog::insertAddFolder(const std::vector<Zstring>& newFolders, size_t 
         bSizerFolders->Insert(pos + i, newFolder, 0, wxEXPAND);
         additionalFolderPanels_.insert(additionalFolderPanels_.begin() + pos + i, newFolder);
 
-        //register events
-        newFolder->m_bpButtonRemoveFolder->Bind(wxEVT_COMMAND_BUTTON_CLICKED, [this](wxCommandEvent& event) { onRemoveFolder(event); });
-
         //make sure panel has proper default height
         newFolder->GetSizer()->SetSizeHints(newFolder); //~=Fit() + SetMinSize()
+
+        //register events
+        newFolder->m_bpButtonRemoveFolder->Bind(wxEVT_COMMAND_BUTTON_CLICKED, [this](wxCommandEvent& event) { onRemoveFolder(event); });
 
         newFolder->setPath(newFolders[i]);
     }

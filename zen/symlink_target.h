@@ -3,16 +3,13 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef SYMLINK_TARGET_H_801783470198357483
-#define SYMLINK_TARGET_H_801783470198357483
+#pragma once
 
 #include "file_error.h"
 #include "file_path.h"
 
     #include <unistd.h>
     #include <stdlib.h> //realpath
-
 
 namespace zen
 {
@@ -93,5 +90,3 @@ Zstring getSymlinkResolvedPath(const Zstring& linkPath)
 }
 
 }
-
-#endif //SYMLINK_TARGET_H_801783470198357483

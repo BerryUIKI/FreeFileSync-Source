@@ -17,9 +17,8 @@
 #include <wx+/bitmap_button.h>
 #include <wx+/choice_enum.h>
 #include <wx+/rtl.h>
-#include <wx+/no_flicker.h>
 #include <wx+/image_tools.h>
-#include <wx+/window_layout.h>
+#include <wx+/window_tools.h>
 #include <wx+/popup_dlg.h>
 #include <wx+/async_task.h>
 #include <wx+/image_resources.h>
@@ -75,9 +74,9 @@ AboutDlg::AboutDlg(wxWindow* parent) : AboutDlgGenerated(parent)
     setImage(*m_bitmapLogo,     loadImage(darkAppearance ? "ffs-header-dark" : "ffs-header-light"));
     setImage(*m_bitmapLogoLeft, loadImage(darkAppearance ? "ffs-logo-dark"   : "ffs-logo-light"));
 
-    setBitmapTextLabel(*m_bpButtonForum, loadImage("ffs_forum"), L"FreeFileSync Forum");
-    setBitmapTextLabel(*m_bpButtonEmail, loadImage("ffs_email"), wxString() + L"zenju" + L'@' + /*don't leave full email in either source or binary*/ L"freefilesync.org");
-    m_bpButtonEmail->SetToolTip(                          wxString() + L"mailto:zenju" + L'@' + /*don't leave full email in either source or binary*/ L"freefilesync.org");
+    setButtonLabel(*m_bpButtonForum, loadImage("ffs_forum"), L"FreeFileSync Forum");
+    setButtonLabel(*m_bpButtonEmail, loadImage("ffs_email"), wxString() + L"zenju" + L'@' + /*don't leave full email in either source or binary*/ L"freefilesync.org");
+    m_bpButtonEmail->SetToolTip(                      wxString() + L"mailto:zenju" + L'@' + /*don't leave full email in either source or binary*/ L"freefilesync.org");
 
     wxString build = utfTo<wxString>(ffsVersion);
 
@@ -106,7 +105,7 @@ AboutDlg::AboutDlg(wxWindow* parent) : AboutDlgGenerated(parent)
         m_staticTextDonate->Hide(); //temporarily! => avoid impact to dialog width
 
         setRelativeFontSize(*m_buttonDonate1, 1.25);
-        setBitmapTextLabel(*m_buttonDonate1, loadImage("ffs_heart", dipToScreen(28)), m_buttonDonate1->GetLabelText());
+        setButtonLabel(*m_buttonDonate1, loadImage("ffs_heart", dipToScreen(28)), m_buttonDonate1->GetLabelText());
 
         m_buttonShowSupporterDetails->Hide();
         m_buttonDonate2->Hide();
@@ -122,7 +121,7 @@ AboutDlg::AboutDlg(wxWindow* parent) : AboutDlgGenerated(parent)
     for (const TranslationInfo& ti : getAvailableTranslations())
     {
         //country flag
-        wxStaticBitmap* staticBitmapFlag = new wxStaticBitmap(m_scrolledWindowTranslators, wxID_ANY, toScaledBitmap(loadImage(ti.languageFlag)));
+        wxStaticBitmap* staticBitmapFlag = new wxStaticBitmap(m_scrolledWindowTranslators, wxID_ANY, toDpiScaledBitmap(loadImage(ti.languageFlag)));
         fgSizerTranslators->Add(staticBitmapFlag, 0, wxALIGN_CENTER);
 
         //translator name
@@ -143,6 +142,7 @@ AboutDlg::AboutDlg(wxWindow* parent) : AboutDlgGenerated(parent)
 
     //--------------------------------------------------------------------------
     //have animal + text match *final* dialog width
+
     GetSizer()->SetSizeHints(this); //~=Fit() + SetMinSize()
 #ifdef __WXGTK3__
     Show(); //GTK3 size calculation requires visible window: https://github.com/wxWidgets/wxWidgets/issues/16088
@@ -158,6 +158,8 @@ AboutDlg::AboutDlg(wxWindow* parent) : AboutDlgGenerated(parent)
         m_staticTextDonate->Show();
         m_staticTextDonate->Wrap(textWidth - 10 /*left gap*/); //wrap *after* changing font size
     }
+    Layout(); //...or image looks squashed [Win11/macOS]
+
     //--------------------------------------------------------------------------
 
     Bind(wxEVT_CHAR_HOOK, [this](wxKeyEvent& event) { onLocalKeyEvent(event); }); //enable dialog-specific key events
@@ -167,7 +169,7 @@ AboutDlg::AboutDlg(wxWindow* parent) : AboutDlgGenerated(parent)
     Show(); //GTK3 size calculation requires visible window: https://github.com/wxWidgets/wxWidgets/issues/16088
     //Hide(); -> avoids old position flash before Center() on GNOME but causes hang on KDE? https://freefilesync.org/forum/viewtopic.php?t=10103#p42404
 #endif
-    Center(); //needs to be re-applied after a dialog size change!
+    Center(); //apply *after* dialog size change!
 
     m_buttonClose->SetFocus(); //on GTK ESC is only associated with wxID_OK correctly if we set at least *any* focus at all!!!
 }
@@ -276,14 +278,48 @@ CloudSetupDlg::CloudSetupDlg(wxWindow* parent, Zstring& folderPathPhrase, Zstrin
 {
     setStandardButtonLayout(*bSizerStdButtons, StdButtons().setAffirmative(m_buttonOK).setCancel(m_buttonCancel));
 
-    setImage(*m_toggleBtnGdrive, loadImage("google_drive"));
-
     setRelativeFontSize(*m_toggleBtnGdrive, 1.25);
     setRelativeFontSize(*m_toggleBtnSftp,   1.25);
     setRelativeFontSize(*m_toggleBtnFtp,    1.25);
 
-    setBitmapTextLabel(*m_buttonGdriveAddUser,    loadImage("user_add",    dipToScreen(20)), m_buttonGdriveAddUser   ->GetLabelText());
-    setBitmapTextLabel(*m_buttonGdriveRemoveUser, loadImage("user_remove", dipToScreen(20)), m_buttonGdriveRemoveUser->GetLabelText());
+    //------------------------------------------------------------------------------------------------
+    const wxSize minSize{dipToScreen(80), loadImage("google_drive").GetHeight() + dipToScreen(4)};
+
+    auto generateSelectImage = [&](wxButton& btn, const std::string_view imgName, bool selected)
+    {
+        wxImage img = createImageFromText(btn.GetLabelText(), btn.GetFont(),
+                                          selected ? *wxBLACK : //accessibility: always set both foreground AND background colors! see getColorToggleButtonFill()
+                                          btn.GetForegroundColour());
+        if (!imgName.empty())
+        {
+            wxImage imgIco = /*mirrorIfRtl*/ loadImage(imgName);
+
+            if (!selected)
+                imgIco = greyScale(imgIco);
+
+            img = wxTheApp->GetLayoutDirection() != wxLayout_RightToLeft ?
+                  stackImages(imgIco, img, ImageStackLayout::horizontal, ImageStackAlignment::center, dipToScreen(5)) :
+                  stackImages(img, imgIco, ImageStackLayout::horizontal, ImageStackAlignment::center, dipToScreen(5));
+        }
+        if (selected)
+            img = layOver(rectangleImage(getMaxSize(minSize, img.GetSize() + wxSize(dipToScreen(10), 0)),
+                                         getColorToggleButtonFill(), getColorToggleButtonBorder(), dipToScreen(1)), img);
+
+        return img;
+    };
+
+    m_toggleBtnGdrive->init(generateSelectImage(*m_toggleBtnGdrive, "google_drive", true /*selected*/),
+                            generateSelectImage(*m_toggleBtnGdrive, "google_drive", false /*selected*/), 0 /*pad*/);
+
+    m_toggleBtnSftp->init(generateSelectImage(*m_toggleBtnSftp, "", true /*selected*/),
+                          generateSelectImage(*m_toggleBtnSftp, "", false /*selected*/), 0 /*pad*/);
+
+    m_toggleBtnFtp->init(generateSelectImage(*m_toggleBtnFtp, "", true /*selected*/),
+                         generateSelectImage(*m_toggleBtnFtp, "", false /*selected*/), 0 /*pad*/);
+    //------------------------------------------------------------------------------------------------
+
+    setButtonLabel(*m_buttonGdriveAddUser,    loadImage("user_add",    dipToScreen(20)), m_buttonGdriveAddUser   ->GetLabelText());
+    setButtonLabel(*m_buttonGdriveRemoveUser, loadImage("user_remove", dipToScreen(20)), m_buttonGdriveRemoveUser->GetLabelText());
 
     setImage(*m_bitmapGdriveUser,  loadImage("user",   dipToScreen(20)));
     setImage(*m_bitmapGdriveDrive, loadImage("drive",  dipToScreen(20)));
@@ -298,9 +334,9 @@ CloudSetupDlg::CloudSetupDlg(wxWindow* parent, Zstring& folderPathPhrase, Zstrin
     m_textCtrlServer->SetMinSize({dipToWxsize(260), -1});
 
     m_textCtrlPort->SetMinSize({dipToWxsize(60), -1});
-    setDefaultWidth(*m_spinCtrlConnectionCount);
-    setDefaultWidth(*m_spinCtrlChannelCountSftp);
-    setDefaultWidth(*m_spinCtrlTimeout);
+    fixSpinCtrl(*m_spinCtrlConnectionCount);
+    fixSpinCtrl(*m_spinCtrlChannelCountSftp);
+    fixSpinCtrl(*m_spinCtrlTimeout);
 
     setupFileDrop(*m_panelAuth);
     m_panelAuth->Bind(EVENT_DROP_FILE, [this](FileDropEvent& event) { onKeyFileDropped(event); });
@@ -385,15 +421,15 @@ CloudSetupDlg::CloudSetupDlg(wxWindow* parent, Zstring& folderPathPhrase, Zstrin
 
         if (login.portCfg > 0)
             m_textCtrlPort->ChangeValue(numberTo<wxString>(login.portCfg));
-        m_textCtrlServer         ->ChangeValue(utfTo<wxString>(login.server));
-        m_textCtrlUserName       ->ChangeValue(utfTo<wxString>(login.username));
+        m_textCtrlServer  ->ChangeValue(utfTo<wxString>(login.server));
+        m_textCtrlUserName->ChangeValue(utfTo<wxString>(login.username));
         if (login.password)
             m_textCtrlPasswordHidden ->ChangeValue(utfTo<wxString>(*login.password));
         else
             m_checkBoxPasswordPrompt->SetValue(true);
-        m_textCtrlServerPath     ->ChangeValue(utfTo<wxString>(FILE_NAME_SEPARATOR + folderPath.afsPath.value));
+        m_textCtrlServerPath->ChangeValue(utfTo<wxString>(FILE_NAME_SEPARATOR + folderPath.afsPath.value));
         (login.useTls ? m_radioBtnEncryptSsl : m_radioBtnEncryptNone)->SetValue(true);
-        m_spinCtrlTimeout        ->SetValue(login.timeoutSec);
+        m_spinCtrlTimeout->SetValue(login.timeoutSec);
     }
 
     m_spinCtrlConnectionCount->SetValue(parallelOps);
@@ -417,7 +453,7 @@ CloudSetupDlg::CloudSetupDlg(wxWindow* parent, Zstring& folderPathPhrase, Zstrin
     Show(); //GTK3 size calculation requires visible window: https://github.com/wxWidgets/wxWidgets/issues/16088
     //Hide(); -> avoids old position flash before Center() on GNOME but causes hang on KDE? https://freefilesync.org/forum/viewtopic.php?t=10103#p42404
 #endif
-    Center(); //needs to be re-applied after a dialog size change!
+    Center(); //apply *after* dialog size change!
 
     updateGui(); //*after* SetSizeHints when standard dialog height has been calculated
 
@@ -427,7 +463,7 @@ CloudSetupDlg::CloudSetupDlg(wxWindow* parent, Zstring& folderPathPhrase, Zstrin
 
 void CloudSetupDlg::onGdriveUserAdd(wxCommandEvent& event)
 {
-    guiQueue_.processAsync([timeoutSec = extractGdriveLogin(getFolderPath().afsDevice).timeoutSec]() -> std::variant<std::string /*email*/, FileError>
+    guiQueue_.processAsync([timeoutSec = extractGdriveLogin(getFolderPath().afsDevice).timeoutSec] -> std::variant<std::string /*email*/, FileError>
     {
         try
         {
@@ -500,7 +536,7 @@ void CloudSetupDlg::gdriveUpdateDrivesAndSelect(const std::string& accountEmail,
     m_listBoxGdriveDrives->Clear();
     m_listBoxGdriveDrives->Append(txtLoading_);
 
-    guiQueue_.processAsync([accountEmail, timeoutSec = extractGdriveLogin(getFolderPath().afsDevice).timeoutSec]() ->
+    guiQueue_.processAsync([accountEmail, timeoutSec = extractGdriveLogin(getFolderPath().afsDevice).timeoutSec] ->
                            std::variant<std::vector<Zstring /*locationName*/>, FileError>
     {
         try
@@ -648,9 +684,9 @@ void CloudSetupDlg::onSelectKeyfile(wxCommandEvent& event)
 
 void CloudSetupDlg::updateGui()
 {
-    m_toggleBtnGdrive->SetValue(type_ == CloudType::gdrive);
-    m_toggleBtnSftp  ->SetValue(type_ == CloudType::sftp);
-    m_toggleBtnFtp   ->SetValue(type_ == CloudType::ftp);
+    m_toggleBtnGdrive->setActive(type_ == CloudType::gdrive);
+    m_toggleBtnSftp  ->setActive(type_ == CloudType::sftp);
+    m_toggleBtnFtp   ->setActive(type_ == CloudType::ftp);
 
     bSizerGdrive->Show(type_ == CloudType::gdrive);
     bSizerServer->Show(type_ == CloudType::ftp || type_ == CloudType::sftp);
@@ -984,7 +1020,7 @@ CopyToDialog::CopyToDialog(wxWindow* parent,
     Show(); //GTK3 size calculation requires visible window: https://github.com/wxWidgets/wxWidgets/issues/16088
     //Hide(); -> avoids old position flash before Center() on GNOME but causes hang on KDE? https://freefilesync.org/forum/viewtopic.php?t=10103#p42404
 #endif
-    Center(); //needs to be re-applied after a dialog size change!
+    Center(); //apply *after* dialog size change!
 
     m_buttonOK->SetFocus();
 }
@@ -1072,7 +1108,7 @@ private:
 
         //use system icon if available (can fail on Linux??)
         try { return extractWxImage(fff::getTrashIcon(imgDefault.GetHeight())); /*throw SysError*/ }
-        catch (SysError&) { assert(false); return imgDefault; }
+        catch ([[maybe_unused]] const SysError& e) { assert(false); return imgDefault; }
     }();
 
     //output-only parameters:
@@ -1113,7 +1149,7 @@ DeleteDialog::DeleteDialog(wxWindow* parent,
     Show(); //GTK3 size calculation requires visible window: https://github.com/wxWidgets/wxWidgets/issues/16088
     //Hide(); -> avoids old position flash before Center() on GNOME but causes hang on KDE? https://freefilesync.org/forum/viewtopic.php?t=10103#p42404
 #endif
-    Center(); //needs to be re-applied after a dialog size change!
+    Center(); //apply *after* dialog size change!
 
     m_buttonOK->SetFocus();
 }
@@ -1266,7 +1302,7 @@ SyncConfirmationDlg::SyncConfirmationDlg(wxWindow* parent,
     Show(); //GTK3 size calculation requires visible window: https://github.com/wxWidgets/wxWidgets/issues/16088
     //Hide(); -> avoids old position flash before Center() on GNOME but causes hang on KDE? https://freefilesync.org/forum/viewtopic.php?t=10103#p42404
 #endif
-    Center(); //needs to be re-applied after a dialog size change!
+    Center(); //apply *after* dialog size change!
 
     m_buttonOK->SetFocus();
 }
@@ -1444,9 +1480,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, GlobalConfig& globalCfg) :
     const wxImage imgFileManagerSmall_([]
     {
         try { return extractWxImage(fff::getFileManagerIcon(dipToScreen(20))); /*throw SysError*/ }
-        catch (SysError&) { assert(false); return loadImage("file_manager", dipToScreen(20)); }
+        catch ([[maybe_unused]] const SysError& e) { assert(false); return loadImage("file_manager", dipToScreen(20)); }
     }());
-    setImage(*m_bpButtonShowLogFolder, imgFileManagerSmall_);
+    setButtonLabel(*m_bpButtonShowLogFolder, imgFileManagerSmall_);
     m_bpButtonShowLogFolder->SetToolTip(translate(extCommandFileManager.description));//translate default external apps on the fly: "Show in Explorer"
 
     m_logFolderPath->SetHint(utfTo<wxString>(defaultCfg_.logFolderPhrase));
@@ -1456,7 +1492,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, GlobalConfig& globalCfg) :
 
     logFolderSelector_.setPath(globalCfg.logFolderPhrase);
 
-    setDefaultWidth(*m_spinCtrlLogFilesMaxAge);
+    fixSpinCtrl(*m_spinCtrlLogFilesMaxAge);
 
     setImage(*m_bitmapSettings,           loadImage("settings"));
     setImage(*m_bitmapWarnings,           loadImage("msg_warning", dipToScreen(20)));
@@ -1466,11 +1502,11 @@ OptionsDlg::OptionsDlg(wxWindow* parent, GlobalConfig& globalCfg) :
     setImage(*m_bitmapCompareDone,        loadImage("compare",      dipToScreen(20)));
     setImage(*m_bitmapSyncDone,           loadImage("start_sync",   dipToScreen(20)));
     setImage(*m_bitmapAlertPending,       loadImage("msg_error",    dipToScreen(20)));
-    setImage(*m_bpButtonPlayCompareDone,  loadImage("play_sound"));
-    setImage(*m_bpButtonPlaySyncDone,     loadImage("play_sound"));
-    setImage(*m_bpButtonPlayAlertPending, loadImage("play_sound"));
-    setImage(*m_bpButtonAddRow,           loadImage("item_add"));
-    setImage(*m_bpButtonRemoveRow,        loadImage("item_remove"));
+    setButtonLabel(*m_bpButtonPlayCompareDone,  loadImage("play_sound" ), 0 /*pad*/);
+    setButtonLabel(*m_bpButtonPlaySyncDone,     loadImage("play_sound" ), 0 /*pad*/);
+    setButtonLabel(*m_bpButtonPlayAlertPending, loadImage("play_sound" ), 0 /*pad*/);
+    setButtonLabel(*m_bpButtonAddRow,           loadImage("item_add"   ), 0 /*pad*/);
+    setButtonLabel(*m_bpButtonRemoveRow,        loadImage("item_remove"), 0 /*pad*/);
 
     //--------------------------------------------------------------------------------
     m_checkListHiddenDialogs->Hide();
@@ -1639,7 +1675,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, GlobalConfig& globalCfg) :
     Show(); //GTK3 size calculation requires visible window: https://github.com/wxWidgets/wxWidgets/issues/16088
     //Hide(); -> avoids old position flash before Center() on GNOME but causes hang on KDE? https://freefilesync.org/forum/viewtopic.php?t=10103#p42404
 #endif
-    Center(); //needs to be re-applied after a dialog size change!
+    Center(); //apply *after* dialog size change!
 
     //restore actual value:
     setExtApp(globalCfg.externalApps);
@@ -2046,7 +2082,7 @@ SelectTimespanDlg::SelectTimespanDlg(wxWindow* parent, time_t& timeFrom, time_t&
     Show(); //GTK3 size calculation requires visible window: https://github.com/wxWidgets/wxWidgets/issues/16088
     //Hide(); -> avoids old position flash before Center() on GNOME but causes hang on KDE? https://freefilesync.org/forum/viewtopic.php?t=10103#p42404
 #endif
-    Center(); //needs to be re-applied after a dialog size change!
+    Center(); //apply *after* dialog size change!
 
     m_buttonOK->SetFocus();
 }
@@ -2157,7 +2193,7 @@ PasswordPromptDlg::PasswordPromptDlg(wxWindow* parent, const std::wstring& msg, 
     Show(); //GTK3 size calculation requires visible window: https://github.com/wxWidgets/wxWidgets/issues/16088
     //Hide(); -> avoids old position flash before Center() on GNOME but causes hang on KDE? https://freefilesync.org/forum/viewtopic.php?t=10103#p42404
 #endif
-    Center(); //needs to be re-applied after a dialog size change!
+    Center(); //apply *after* dialog size change!
 
     updateGui(); //*after* SetSizeHints when standard dialog height has been calculated
 
@@ -2234,7 +2270,7 @@ CfgHighlightDlg::CfgHighlightDlg(wxWindow* parent, int& cfgHistSyncOverdueDays) 
 
     m_staticTextHighlight->Wrap(dipToWxsize(300));
 
-    setDefaultWidth(*m_spinCtrlOverdueDays);
+    fixSpinCtrl(*m_spinCtrlOverdueDays);
 
     m_spinCtrlOverdueDays->SetValue(cfgHistSyncOverdueDays);
 
@@ -2243,7 +2279,7 @@ CfgHighlightDlg::CfgHighlightDlg(wxWindow* parent, int& cfgHistSyncOverdueDays) 
     Show(); //GTK3 size calculation requires visible window: https://github.com/wxWidgets/wxWidgets/issues/16088
     //Hide(); -> avoids old position flash before Center() on GNOME but causes hang on KDE? https://freefilesync.org/forum/viewtopic.php?t=10103#p42404
 #endif
-    Center(); //needs to be re-applied after a dialog size change!
+    Center(); //apply *after* dialog size change!
 
     m_spinCtrlOverdueDays->SetFocus();
 }
@@ -2314,7 +2350,7 @@ ActivationDlg::ActivationDlg(wxWindow* parent,
     Show(); //GTK3 size calculation requires visible window: https://github.com/wxWidgets/wxWidgets/issues/16088
     //Hide(); -> avoids old position flash before Center() on GNOME but causes hang on KDE? https://freefilesync.org/forum/viewtopic.php?t=10103#p42404
 #endif
-    Center(); //needs to be re-applied after a dialog size change!
+    Center(); //apply *after* dialog size change!
 
     m_buttonActivateOnline->SetFocus();
 }
@@ -2403,6 +2439,7 @@ DownloadProgressWindow::Impl::Impl(wxWindow* parent, int64_t fileSizeTotal) :
     DownloadProgressDlgGenerated(parent),
     bytesTotal_(fileSizeTotal)
 {
+    SetExtraStyle(GetExtraStyle() | wxWS_EX_TRANSIENT);
 
     setStandardButtonLayout(*bSizerStdButtons, StdButtons().setCancel(m_buttonCancel));
 
@@ -2422,7 +2459,7 @@ DownloadProgressWindow::Impl::Impl(wxWindow* parent, int64_t fileSizeTotal) :
     Show(); //GTK3 size calculation requires visible window: https://github.com/wxWidgets/wxWidgets/issues/16088
     //Hide(); -> avoids old position flash before Center() on GNOME but causes hang on KDE? https://freefilesync.org/forum/viewtopic.php?t=10103#p42404
 #endif
-    Center(); //needs to be re-applied after a dialog size change!
+    Center(); //apply *after* dialog size change!
 
     Show();
 

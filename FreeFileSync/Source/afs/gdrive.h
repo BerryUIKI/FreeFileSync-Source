@@ -3,9 +3,7 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef FS_GDRIVE_9238425018342701356
-#define FS_GDRIVE_9238425018342701356
+#pragma once
 
 #include "abstract.h"
 
@@ -40,5 +38,3 @@ GdriveLogin extractGdriveLogin(const AfsDevice& afsDevice); //noexcept
 //return empty, if not a Google Drive path
 Zstring getGoogleDriveFolderUrl(const AbstractPath& folderPath); //throw FileError
 }
-
-#endif //FS_GDRIVE_9238425018342701356

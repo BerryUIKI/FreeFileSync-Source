@@ -26,6 +26,34 @@ const int EMAIL_SHORT_ITEMS_MAX   = 0; //
 const int SEPARATION_LINE_LEN = 40;
 
 
+std::wstring getUserDescription() //throw FileError
+{
+    const Zstring userName = getLoginUser(); //throw FileError
+    const Zstring hostName = getHostName(); //throw FileError
+
+    if (contains(getUpperCase(hostName), getUpperCase(userName)))
+        return utfTo<std::wstring>(userName); //no need for text duplication! e.g. "Zenju @ Zenju-PC"
+
+    return utfTo<std::wstring>(userName + Zstr(" @ ") + hostName); //e.g. "Admin @ Zenju-PC"
+}
+
+
+std::wstring /*may be empty*/ getMachineDescription() //throw FileError
+{
+    const ComputerModel cm = getComputerModel(); //throw FileError
+
+    std::wstring descr = cm.model;
+
+    if (!cm.vendor.empty())
+    {
+        if (!cm.model.empty())
+            descr += L' ';
+        descr += L'(' + cm.vendor + L')';
+    }
+    return descr;
+}
+
+
 std::string generateLogHeaderTxt(const ProcessSummary& s, const ErrorLog& log, int logPreviewMax)
 {
     const auto tabSpace = utfTo<std::string>(TAB_SPACE);
@@ -104,7 +132,7 @@ std::string generateLogHeaderTxt(const ProcessSummary& s, const ErrorLog& log, i
 
 std::string generateLogFooterTxt(const std::wstring& logFilePath /*optional*/, int logItemsTotal, int logItemsMax) //throw FileError
 {
-    const ComputerModel cm = getComputerModel(); //throw FileError
+    const std::wstring machDescr = getMachineDescription(); //throw FileError
 
     std::string output;
     if (logItemsTotal > logItemsMax)
@@ -113,10 +141,8 @@ std::string generateLogFooterTxt(const std::wstring& logFilePath /*optional*/, i
 
     output += std::string(SEPARATION_LINE_LEN, '_') + '\n' +
 
-              utfTo<std::string>(getOsDescription() + /*throw FileError*/ +
-                                 L" - " + utfTo<std::wstring>(getUserDescription()) /*throw FileError*/ +
-                                 (!cm.model .empty() ? L" - " + cm.model  : L"") +
-                                 (!cm.vendor.empty() ? L" - " + cm.vendor : L"")) + '\n';
+              utfTo<std::string>(getOsDescription() + L" - " + getUserDescription() /*throw FileError*/ +
+                                 (!machDescr.empty() ? L" - " + machDescr : L"")) + '\n';
     if (!logFilePath.empty())
         output += utfTo<std::string>(_("Log file:") + L' ' + logFilePath) + '\n';
 
@@ -124,7 +150,7 @@ std::string generateLogFooterTxt(const std::wstring& logFilePath /*optional*/, i
 }
 
 
-std::string htmlTxt(const std::string_view& str)
+std::string htmlTxt(const std::string_view str)
 {
     std::string msg = htmlSpecialChars(str);
     trim(msg);
@@ -157,8 +183,6 @@ std::string htmlTxt(const std::wstring& str) { return htmlTxt(utfTo<std::string>
 std::string htmlTxt(const      wchar_t* str) { return htmlTxt(utfTo<std::string>(str)); }
 
 
-//Astyle screws up royally with the following raw string literals!
-//*INDENT-OFF*
 std::string formatMessageHtml(const LogEntry& entry)
 {
     const std::string typeLabel = htmlTxt(getMessageTypeLabel(entry.type));
@@ -173,7 +197,7 @@ std::string formatMessageHtml(const LogEntry& entry)
     return R"(		<tr>
             <td valign="top">)" + htmlTxt(formatTime(formatTimeTag, getLocalTime(entry.time))) + R"(</td>
             <td valign="top"><img src="https://freefilesync.org/images/log/)" + typeImage + R"(" width="16" height="16" alt=")" + typeLabel + R"(:"></td>
-            <td>)" + htmlTxt(makeStringView(entry.message.begin(), entry.message.end())) + R"(</td>
+            <td>)" + htmlTxt(std::string_view(entry.message.begin(), entry.message.end())) + R"(</td>
         </tr>
 )";
 }
@@ -250,7 +274,7 @@ std::string generateLogHeaderHtml(const ProcessSummary& s, const ErrorLog& log, 
 
     const ErrorLogStats logCount = getStats(log);
 
-    if (logCount.errors > 0) 
+    if (logCount.errors > 0)
         output += R"(
             <tr>
                 <td>)" + htmlTxt(_("Errors:")) + R"(</td>
@@ -270,8 +294,8 @@ std::string generateLogHeaderHtml(const ProcessSummary& s, const ErrorLog& log, 
             <tr>
                 <td>)" + htmlTxt(_("Items processed:")) + R"(</td>
                 <td><img src="https://freefilesync.org/images/log/file.png" width="24" height="24" alt=""></td>
-                <td><span style="font-weight:600;">)" + htmlTxt(formatNumber(s.statsProcessed.items)) + "</span> (" + 
-                                          htmlTxt(formatFilesizeShort(s.statsProcessed.bytes)) + R"()</td>
+                <td><span style="font-weight:600;">)" + htmlTxt(formatNumber(s.statsProcessed.items)) + "</span> (" +
+              htmlTxt(formatFilesizeShort(s.statsProcessed.bytes)) + R"()</td>
             </tr>)";
 
     if ((s.statsTotal.items < 0 && s.statsTotal.bytes < 0) || //no total items/bytes: e.g. for pure folder comparison
@@ -282,8 +306,8 @@ std::string generateLogHeaderHtml(const ProcessSummary& s, const ErrorLog& log, 
             <tr>
                 <td>)" + htmlTxt(_("Items remaining:")) + R"(</td>
                 <td></td>
-                <td><span style="font-weight:600;">)" + htmlTxt(formatNumber(s.statsTotal.items - s.statsProcessed.items)) + "</span> (" + 
-                                          htmlTxt(formatFilesizeShort(s.statsTotal.bytes - s.statsProcessed.bytes)) + R"()</td>
+                <td><span style="font-weight:600;">)" + htmlTxt(formatNumber(s.statsTotal.items - s.statsProcessed.items)) + "</span> (" +
+                  htmlTxt(formatFilesizeShort(s.statsTotal.bytes - s.statsProcessed.bytes)) + R"()</td>
             </tr>)";
 
     const int64_t totalTimeSec = std::chrono::duration_cast<std::chrono::seconds>(s.totalTime).count();
@@ -318,15 +342,15 @@ std::string generateLogHeaderHtml(const ProcessSummary& s, const ErrorLog& log, 
         output += R"(	</table>
 )";
         if (logFailTotal > previewCount)
-            output += R"(	<div><span style="font-weight:600; padding:0 10px;">[&hellip;]</span>)" + 
+            output += R"(	<div><span style="font-weight:600; padding:0 10px;">[&hellip;]</span>)" +
                       htmlTxt(replaceCpy(_P("Showing %y of 1 item", "Showing %y of %x items", logFailTotal), //%x used as plural form placeholder!
-                      L"%y", formatNumber(previewCount))) + "</div>\n";
+                                         L"%y", formatNumber(previewCount))) + "</div>\n";
 
         output += R"(	<div style="border-bottom: 1px solid #AAA; margin: 5px 0;"></div><br>
 )";
     }
 
-        output += R"(
+    output += R"(
     <table class="log-items" style="line-height:1em; border-spacing:0;">
 )";
     return output;
@@ -336,24 +360,23 @@ std::string generateLogHeaderHtml(const ProcessSummary& s, const ErrorLog& log, 
 std::string generateLogFooterHtml(const std::wstring& logFilePath /*optional*/, int logItemsTotal, int logItemsMax) //throw FileError
 {
     const std::string osImage = "os-linux.png";
-    const ComputerModel cm = getComputerModel(); //throw FileError
+    const std::wstring machDescr = getMachineDescription(); //throw FileError
 
     std::string output = R"(	</table>
 )";
 
     if (logItemsTotal > logItemsMax)
-        output += R"(	<div><span style="font-weight:600; padding:0 10px;">[&hellip;]</span>)" + 
+        output += R"(	<div><span style="font-weight:600; padding:0 10px;">[&hellip;]</span>)" +
                   htmlTxt(replaceCpy(_P("Showing %y of 1 item", "Showing %y of %x items", logItemsTotal), //%x used as plural form placeholder!
-                          L"%y", formatNumber(logItemsMax))) + "</div>\n";
+                                     L"%y", formatNumber(logItemsMax))) + "</div>\n";
 
     output += R"(
     <div style="border-bottom:1px solid #AAA; margin:5px 0;"></div>
     <div style="font-size:smaller;">
         <img src="https://freefilesync.org/images/log/)" + osImage + R"(" width="24" height="24" alt="" style="vertical-align:middle;">
-        <span style="vertical-align:middle;">)" + htmlTxt(getOsDescription()) + /*throw FileError*/ + 
-            " &ndash; " + htmlTxt(getUserDescription()) /*throw FileError*/ + 
-            (!cm.model .empty() ? " &ndash; " + htmlTxt(cm.model ) : "") +
-            (!cm.vendor.empty() ? " &ndash; " + htmlTxt(cm.vendor) : "") + R"(</span>
+        <span style="vertical-align:middle;">)" + htmlTxt(getOsDescription()) +
+              " &ndash; " + htmlTxt(getUserDescription()) /*throw FileError*/ +
+              (!machDescr.empty() ? " &ndash; " + htmlTxt(machDescr) : "") + R"(</span>
     </div>)";
 
     if (!logFilePath.empty())
@@ -369,8 +392,6 @@ std::string generateLogFooterHtml(const std::wstring& logFilePath /*optional*/, 
 )";
     return output;
 }
-
-//*INDENT-ON*
 
 
 //write log items in blocks instead of creating one big string: memory allocation might fail; think 1 million entries!
@@ -500,7 +521,7 @@ std::vector<LogFileInfo> getLogFiles(const AbstractPath& logFolderPath) //throw 
                 isdigit(itemPhrase.end()[-2]) &&
                 isdigit(itemPhrase.end()[-1]))
             {
-                const TimeComp tc = parseTime(Zstr("%Y-%m-%d %H%M%S"), makeStringView(itemPhrase.end() - TIME_STAMP_LENGTH, 17)); //returns TimeComp() on error
+                const TimeComp tc = parseTime(Zstr("%Y-%m-%d %H%M%S"), ZstringView(&itemPhrase.end()[-TIME_STAMP_LENGTH], 17)); //returns TimeComp() on error
                 if (const auto [localTime, timeValid] = localToTimeT(tc);
                     timeValid)
                 {
@@ -556,7 +577,8 @@ void limitLogfileCount(const AbstractPath& logFolderPath, //throw FileError, X
                 if (notifyStatus) notifyStatus(statusPrefix + fmtPath(AFS::getDisplayPath(lfi.filePath))); //throw X
                 try
                 {
-                    AFS::removeFilePlain(lfi.filePath); //throw FileError
+                    AFS::removeFileIfExists(lfi.filePath); //throw FileError
+                    //multiple FFS instances may try to clean up at the same time!
                 }
                 catch (const FileError&) { if (!firstError) firstError = std::current_exception(); };
             }
@@ -650,7 +672,7 @@ void fff::saveLogFile(const AbstractPath& logFilePath, //throw FileError, X
         assert(logFolderPath); //else: logFilePath == device root; not possible with generateLogFilePath()
         limitLogfileCount(*logFolderPath, logfilesMaxAgeDays, logsToKeepPaths, notifyStatus); //throw FileError, X
     }
-    catch (const FileError&) { if (!firstError) firstError = std::current_exception(); };
+    catch (FileError&) { if (!firstError) firstError = std::current_exception(); };
 
     if (firstError) //late failure!
         std::rethrow_exception(firstError);

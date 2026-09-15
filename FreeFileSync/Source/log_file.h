@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef GENERATE_LOGFILE_H_931726432167489732164
-#define GENERATE_LOGFILE_H_931726432167489732164
+#pragma once
 
 #include <zen/error_log.h>
 #include "status_handler.h"
 #include "afs/abstract.h"
-
 
 namespace fff
 {
@@ -36,5 +33,3 @@ void sendLogAsEmail(const std::string& email, //throw FileError, X
                     const AbstractPath& logFilePath,
                     const std::function<void(std::wstring&& msg)>& notifyStatus /*throw X*/);
 }
-
-#endif //GENERATE_LOGFILE_H_931726432167489732164

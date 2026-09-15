@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef STRUCTURE_TOOLS_H_7823097420397434
-#define STRUCTURE_TOOLS_H_7823097420397434
+#pragma once
 
 #include "base/structures.h"
 #include "base/process_callback.h"
 #include "config.h"
-
 
 namespace fff
 {
@@ -24,5 +21,3 @@ void logNonDefaultSettings(const GlobalConfig& globalCfg, PhaseCallback& callbac
 //facilitate drag & drop config merge:
 FfsGuiConfig merge(const std::vector<FfsGuiConfig>& guiCfgs);
 }
-
-#endif //STRUCTURE_TOOLS_H_7823097420397434

@@ -3,15 +3,12 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef FOLDER_HISTORY_BOX_H_08170517045945
-#define FOLDER_HISTORY_BOX_H_08170517045945
+#pragma once
 
 #include <wx/combobox.h>
 #include <memory>
 #include <zen/zstring.h>
 #include <zen/utf.h>
-
 
 namespace fff
 {
@@ -87,5 +84,3 @@ private:
     std::shared_ptr<HistoryList> sharedHistory_;
 };
 }
-
-#endif //FOLDER_HISTORY_BOX_H_08170517045945

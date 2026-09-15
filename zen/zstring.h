@@ -3,18 +3,14 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef ZSTRING_H_73425873425789
-#define ZSTRING_H_73425873425789
+#pragma once
 
 #include <stdexcept> //not used by this header, but the "rest of the world" needs it!
 #include "utf.h"     //
 #include "string_base.h"
 
-
     using Zchar = char;
     #define Zstr(x) x
-
 
 //"The reason for all the fuss above" - Loki/SmartPtr
 //a high-performance string for interfacing with native OS APIs in multithreaded contexts
@@ -105,6 +101,3 @@ const wchar_t* const TAB_SPACE = L"    "; //4: the only sensible space count for
 
 const wchar_t LINE_SEPARATOR      = L'\u2028'; //WTF: visually indistinguishable from new line!
 const wchar_t PARAGRAPH_SEPARATOR = L'\u2029';
-
-
-#endif //ZSTRING_H_73425873425789

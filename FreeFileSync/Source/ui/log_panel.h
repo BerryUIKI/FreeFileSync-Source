@@ -3,14 +3,11 @@
 // * GNU General Public License: https://www.gnu.org/licenses/gpl-3.0          *
 // * Copyright (C) Zenju (zenju AT freefilesync DOT org) - All Rights Reserved *
 // *****************************************************************************
-
-#ifndef LOG_PANEL_3218470817450193
-#define LOG_PANEL_3218470817450193
+#pragma once
 
 #include <zen/error_log.h>
 #include "gui_generated.h"
 #include <wx+/grid.h>
-
 
 namespace fff
 {
@@ -39,5 +36,3 @@ private:
     bool processingKeyEventHandler_ = false;
 };
 }
-
-#endif //LOG_PANEL_3218470817450193
