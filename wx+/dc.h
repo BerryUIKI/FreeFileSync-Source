@@ -12,6 +12,10 @@
 #include <wx/dcbuffer.h> //for macro: wxALWAYS_NATIVE_DOUBLE_BUFFER
 #include <wx/dcscreen.h>
 
+#if !wxCHECK_VERSION(3, 3, 0)
+using wxReadOnlyDC = wxDC;
+#endif
+
 
 namespace zen
 {
