@@ -341,7 +341,9 @@ public:
     {
         assert(wnd.IsDoubleBuffered());
         dc_.emplace<wxPaintDC>(&wnd);
+#if wxCHECK_VERSION(3, 3, 0)
         static_cast<wxDC&>(*this).DisableAutomaticBoundingBoxUpdates(); //MOOOAAAR perf!?
+#endif
     }
 
     operator wxDC& ()

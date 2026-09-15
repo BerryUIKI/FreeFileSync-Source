@@ -98,6 +98,9 @@ Upstream source assumes custom-patched wxWidgets builds. Standard Linux distribu
    - In `wx+/darkmode.h`: Wrap `using ColorTheme = wxApp::Appearance;` with `#if wxCHECK_VERSION(3, 3, 0) ... #else enum class ColorTheme { System, Light, Dark }; #endif`.
    - In `wx+/darkmode.cpp`: Guard `darkModeAvailable()` and `changeColorTheme()` with `#if wxCHECK_VERSION(3, 3, 0)`.
 
+3. **Compatibility guard for `DisableAutomaticBoundingBoxUpdates`**:
+   In `wx+/dc.h`: Wrap `static_cast<wxDC&>(*this).DisableAutomaticBoundingBoxUpdates();` with `#if wxCHECK_VERSION(3, 3, 0) ... #endif` (method only exists in wxWidgets 3.3+).
+
 ---
 
 ## 4. CI/CD & Automated Releases
