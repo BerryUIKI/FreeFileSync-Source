@@ -68,7 +68,11 @@ void zen::colorThemeInit(wxApp& app, ColorTheme colTheme) //throw FileError
 {
     assert(!refGlobalColorHook());
 
+#if defined(__WXMSW__) || wxCHECK_VERSION(3, 3, 0)
     globalDefaultThemeIsDark = wxSystemSettings::GetAppearance().AreAppsDark();
+#else
+    globalDefaultThemeIsDark = wxSystemSettings::GetAppearance().IsDark();
+#endif
     ZEN_ON_SCOPE_EXIT(if (!refGlobalColorHook()) refGlobalColorHook() = std::make_unique<SysColorsHook>()); //*after* SetAppearance() and despite errors
 
     //caveat: on macOS there are more themes than light/dark: https://developer.apple.com/documentation/appkit/nsappearance/name-swift.struct

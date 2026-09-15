@@ -145,6 +145,10 @@ Upstream source assumes custom-patched wxWidgets builds. Standard Linux distribu
     `wxSYS_COLOUR_GRIDLINES` is not a standard wxWidgets system color constant and is only present in custom wxWidgets forks.
     - Defined `wxSYS_COLOUR_GRIDLINES` fallback as `wxSYS_COLOUR_3DLIGHT` in `wx+/grid.h`.
 
+14. **Compatibility fallback for `wxSystemAppearance::AreAppsDark`**:
+    In wxWidgets 3.2 on Linux/GTK, `wxSystemAppearance::AreAppsDark()` was only defined on Windows (`__WXMSW__`).
+    - Added fallback to `IsDark()` when `!defined(__WXMSW__) && !wxCHECK_VERSION(3, 3, 0)` in `wx+/darkmode.cpp`.
+
 ---
 
 ## 4. CI/CD & Automated Releases
