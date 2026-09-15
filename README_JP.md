@@ -2,7 +2,9 @@
 
 [English](README.md) | [Deutsch](README_DE.md) | [简体中文](README_zh-CN.md) | [日本語](README_JP.md)
 
+[![CI / CD](https://github.com/BerryUIKI/FreeFileSync-Source/actions/workflows/ci.yml/badge.svg)](https://github.com/BerryUIKI/FreeFileSync-Source/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-14.12-blue.svg)](https://freefilesync.org)
+[![Releases](https://img.shields.io/github/v/release/BerryUIKI/FreeFileSync-Source?color=orange)](https://github.com/BerryUIKI/FreeFileSync-Source/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://freefilesync.org/download.php)
 [![C++ Standard](https://img.shields.io/badge/C%2B%2B-23-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B23)
@@ -15,6 +17,7 @@ FreeFileSync はクロスプラットフォーム対応で、**Windows**、**mac
 
 - **公式ウェブサイト**: [https://freefilesync.org](https://freefilesync.org)
 - **公式ダウンロード**: [https://freefilesync.org/download.php](https://freefilesync.org/download.php)
+- **GitHub リリース（自動ビルド）**: [https://github.com/BerryUIKI/FreeFileSync-Source/releases](https://github.com/BerryUIKI/FreeFileSync-Source/releases)
 - **ソースリポジトリ**: [https://github.com/BerryUIKI/FreeFileSync-Source](https://github.com/BerryUIKI/FreeFileSync-Source)
 
 ---
@@ -29,6 +32,14 @@ FreeFileSync はクロスプラットフォーム対応で、**Windows**、**mac
 - **自動化とリアルタイム監視**: コマンドラインによるバッチ処理と、RealTimeSync による自動フォルダ監視。
 - **高度なフィルタリング**: ワイルドカード、更新日時、ファイルサイズ、正規表現による除外/包含ルール。
 - **データ保護**: バージョニング機能（変更前・削除前ファイルを指定フォルダやごみ箱に退避）。
+
+---
+
+## ビルド済みパッケージと CI/CD
+
+GitHub Actions を通じて複数アーキテクチャ（Linux `x86_64` および `aarch64` / ARM64）向けの自動ビルドとソースコードアーカイブの作成を継続的に行っています。
+
+ビルド済みのポータブルパッケージは [GitHub Releases](https://github.com/BerryUIKI/FreeFileSync-Source/releases) からダウンロードできます。各リリースには単体実行ファイル、起動スクリプト、リソース、SHA-256 チェックサムが含まれています。
 
 ---
 

@@ -1,0 +1,208 @@
+name: CI / CD
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Publish GitHub Release'
+        required: false
+        type: boolean
+        default: false
+      tag_name:
+        description: 'Custom Tag / Release Name (optional, defaults to v<version>)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Linux (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config \
+            libwxgtk3.2-dev \
+            libgtk-3-dev \
+            libcurl4-openssl-dev \
+            libssh2-1-dev \
+            libssl-dev \
+            libidn2-dev \
+            zlib1g-dev \
+            libselinux1-dev
+
+      - name: Build FreeFileSync
+        run: |
+          cd FreeFileSync/Source
+          make -j$(nproc)
+
+      - name: Build RealTimeSync
+        run: |
+          cd FreeFileSync/Source/RealTimeSync
+          make -j$(nproc)
+
+      - name: Extract Version
+        id: get_version
+        run: |
+          VERSION=$(grep 'ffsVersion\[\]' FreeFileSync/Source/version/version.h | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Package Binary Release
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          ARCH="${{ matrix.arch }}"
+          PKG_NAME="FreeFileSync_${VERSION}_Linux_${ARCH}"
+          STAGING_DIR="staging/${PKG_NAME}"
+
+          mkdir -p "${STAGING_DIR}/Bin"
+          mkdir -p "${STAGING_DIR}/Resources"
+
+          # Copy compiled binaries
+          cp "FreeFileSync/Build/Bin/FreeFileSync_${ARCH}" "${STAGING_DIR}/Bin/"
+          cp "FreeFileSync/Build/Bin/RealTimeSync_${ARCH}" "${STAGING_DIR}/Bin/"
+
+          # Copy resources
+          cp -r FreeFileSync/Build/Resources/* "${STAGING_DIR}/Resources/"
+
+          # Copy licenses and documentation
+          cp LICENSE "${STAGING_DIR}/"
+          cp License.txt "${STAGING_DIR}/"
+          cp Changelog.txt "${STAGING_DIR}/"
+          cp README.md "${STAGING_DIR}/"
+
+          # Create executable launcher scripts
+          printf '#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nARCH="$(uname -m)"\nexec "$SCRIPT_DIR/Bin/FreeFileSync_${ARCH}" "$@"\n' > "${STAGING_DIR}/FreeFileSync"
+          chmod +x "${STAGING_DIR}/FreeFileSync"
+
+          printf '#!/bin/sh\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nARCH="$(uname -m)"\nexec "$SCRIPT_DIR/Bin/RealTimeSync_${ARCH}" "$@"\n' > "${STAGING_DIR}/RealTimeSync"
+          chmod +x "${STAGING_DIR}/RealTimeSync"
+
+          # Create compressed tarball
+          mkdir -p dist
+          tar -czvf "dist/${PKG_NAME}.tar.gz" -C staging "${PKG_NAME}"
+
+          # Compute SHA-256 checksum
+          cd dist
+          sha256sum "${PKG_NAME}.tar.gz" > "${PKG_NAME}.tar.gz.sha256"
+
+      - name: Upload Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-linux-${{ matrix.arch }}
+          path: dist/*
+          retention-days: 7
+
+  package-source:
+    name: Package Source Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Version
+        id: get_version
+        run: |
+          VERSION=$(grep 'ffsVersion\[\]' FreeFileSync/Source/version/version.h | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Create Clean Source Archives
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          PKG_NAME="FreeFileSync_${VERSION}_Source"
+          mkdir -p dist
+
+          git archive --format=tar.gz --prefix="${PKG_NAME}/" -o "dist/${PKG_NAME}.tar.gz" HEAD
+          git archive --format=zip --prefix="${PKG_NAME}/" -o "dist/${PKG_NAME}.zip" HEAD
+
+          cd dist
+          sha256sum "${PKG_NAME}.tar.gz" > "${PKG_NAME}.tar.gz.sha256"
+          sha256sum "${PKG_NAME}.zip" > "${PKG_NAME}.zip.sha256"
+
+      - name: Upload Source Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-source
+          path: dist/*
+          retention-days: 7
+
+  release:
+    name: Publish GitHub Release
+    needs: [build, package-source]
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release == true)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Consolidate Release Assets
+        id: prepare_release
+        run: |
+          mkdir -p release_assets
+          find artifacts/ -type f -exec cp {} release_assets/ \;
+
+          cd release_assets
+          # Remove individual checksum files and create a clean unified SHA256SUMS.txt
+          rm -f *.sha256
+          sha256sum *.tar.gz *.zip > SHA256SUMS.txt
+          cd ..
+
+          # Determine Tag and Version
+          if [ -n "${{ inputs.tag_name }}" ]; then
+            TAG="${{ inputs.tag_name }}"
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            VER=$(grep 'ffsVersion\[\]' FreeFileSync/Source/version/version.h | sed -E 's/.*"([^"]+)".*/\1/')
+            TAG="v${VER}"
+          fi
+
+          VERSION="${TAG#v}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract Release Notes from Changelog
+        run: |
+          python3 scripts/extract_changelog.py "${{ steps.prepare_release.outputs.version }}" Changelog.txt release_assets/SHA256SUMS.txt release_notes.md
+
+      - name: Publish Release to GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.prepare_release.outputs.tag }}
+          name: FreeFileSync ${{ steps.prepare_release.outputs.version }}
+          body_path: release_notes.md
+          files: release_assets/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

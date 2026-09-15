@@ -2,7 +2,9 @@
 
 [English](README.md) | [Deutsch](README_DE.md) | [简体中文](README_zh-CN.md) | [日本語](README_JP.md)
 
+[![CI / CD](https://github.com/BerryUIKI/FreeFileSync-Source/actions/workflows/ci.yml/badge.svg)](https://github.com/BerryUIKI/FreeFileSync-Source/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-14.12-blue.svg)](https://freefilesync.org)
+[![Releases](https://img.shields.io/github/v/release/BerryUIKI/FreeFileSync-Source?color=orange)](https://github.com/BerryUIKI/FreeFileSync-Source/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://freefilesync.org/download.php)
 [![C++ Standard](https://img.shields.io/badge/C%2B%2B-23-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B23)
@@ -15,6 +17,7 @@ FreeFileSync 具备跨平台支持，可在 **Windows**、**macOS** 与 **Linux*
 
 - **官方网站**: [https://freefilesync.org](https://freefilesync.org)
 - **官方下载**: [https://freefilesync.org/download.php](https://freefilesync.org/download.php)
+- **GitHub 发布页 (自动化构建)**: [https://github.com/BerryUIKI/FreeFileSync-Source/releases](https://github.com/BerryUIKI/FreeFileSync-Source/releases)
 - **源码仓库**: [https://github.com/BerryUIKI/FreeFileSync-Source](https://github.com/BerryUIKI/FreeFileSync-Source)
 
 ---
@@ -29,6 +32,14 @@ FreeFileSync 具备跨平台支持，可在 **Windows**、**macOS** 与 **Linux*
 - **自动化与监控**：支持命令行批处理作业，并通过 RealTimeSync 实现实时监控与自动化。
 - **高级过滤选项**：支持通配符、文件时间、大小及正则表达式的包含/排除过滤规则。
 - **数据保护**：支持版本控制功能（将旧版本文件保存至指定文件夹或系统回收站）。
+
+---
+
+## 预编译版本与持续集成 (CI/CD)
+
+通过 GitHub Actions 持续进行多架构自动化构建（Linux `x86_64` 与 `aarch64` / ARM64）并自动发布源码压缩包。
+
+可在 [GitHub Releases](https://github.com/BerryUIKI/FreeFileSync-Source/releases) 页面直接下载预编译的绿色便携版归档。每个 Release 均包含独立可执行程序、启动脚本、资源包以及完整的 SHA-256 校验码。
 
 ---
 
