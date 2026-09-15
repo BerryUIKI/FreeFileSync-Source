@@ -128,6 +128,10 @@ Upstream source assumes custom-patched wxWidgets builds. Standard Linux distribu
    In wxWidgets 3.2, `wxAuiManager::GetAllPanes()` returns `wxAuiPaneInfoArray` which privately inherits from `wxVector<wxAuiPaneInfo*>`, making `begin()`/`end()` inaccessible for C++ range-based for loops.
    - Replaced range-based loops over `auiMgr_.GetAllPanes()` with indexed `for (size_t i = 0; i < panes.GetCount(); ++i)` loops in `ui/main_dlg.cpp` and `ui/gui_status_handler.cpp`.
 
+10. **Compatibility guard for `wxGridColumnHeaderRenderer::DrawHighlighted`**:
+    `DrawHighlighted` was introduced in wxWidgets 3.3+ (transparent overlay selection). In wxWidgets 3.2, the method does not exist on `wxGridColumnHeaderRendererDefault`.
+    - Wrapped `DrawHighlighted` with `#if wxCHECK_VERSION(3, 3, 0)` in `FreeFileSync/Source/ui/small_dlgs.cpp`.
+
 ---
 
 ## 4. CI/CD & Automated Releases

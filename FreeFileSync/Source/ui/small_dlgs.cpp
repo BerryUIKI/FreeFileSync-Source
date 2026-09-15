@@ -1596,7 +1596,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, GlobalConfig& globalCfg) :
 
         class : public wxGridColumnHeaderRendererDefault
         {
+#if wxCHECK_VERSION(3, 3, 0)
             void DrawHighlighted(const wxGrid& grid, wxDC& dc, wxRect& rect, int col, int flags) const override { DrawBorder(grid, dc, rect); }
+#endif
         } colRenderNoHighlight_;
     };
     m_gridCustomCommand->GetTable()->SetAttrProvider(new wxGridCellAttrProviderNoColHighlight);
