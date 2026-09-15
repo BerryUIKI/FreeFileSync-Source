@@ -112,7 +112,7 @@ Upstream source assumes custom-patched wxWidgets builds. Standard Linux distribu
 
 6. **Compatibility fallback for `wxLogCollector`**:
    `wxLogCollector` was introduced in wxWidgets 3.3.1+.
-   - Created `wx+/log.h` with a custom `wxLogCollector` class using `wxLogBuffer` and a private `wxLogFormatter` when `!wxCHECK_VERSION(3, 3, 1)`.
+   - Created `wx+/log.h` with a custom `wxLogCollector` class inheriting from `wxLog` when `!wxCHECK_VERSION(3, 3, 1)`.
    - Included `<wx+/log.h>` in `localization.cpp`, `image_resources.cpp`, `batch_status_handler.cpp`, `gui_status_handler.cpp`, and `main_dlg.cpp`.
 
 ---

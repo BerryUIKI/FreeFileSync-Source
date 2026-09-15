@@ -9,30 +9,40 @@
 #include <wx/version.h>
 
 #if !wxCHECK_VERSION(3, 3, 1)
-class wxLogCollector
+class wxLogCollector : public wxLog
 {
-    class Formatter : public wxLogFormatter
-    {
-        wxString Format(wxLogLevel, const wxString& msg, const wxLogRecordInfo&) const override { return msg; }
-    };
-
 public:
-    wxLogCollector() : m_logOrig{wxLog::SetActiveTarget(&m_logBuf)}
+    wxLogCollector() : m_logOrig(wxLog::SetActiveTarget(this))
     {
-        delete m_logBuf.SetFormatter(new Formatter{});
     }
-    ~wxLogCollector()
+    ~wxLogCollector() override
     {
-        m_logBuf.Clear();
         wxLog::SetActiveTarget(m_logOrig);
     }
-    const wxString& GetMessages() const { return m_logBuf.GetBuffer(); }
+    const wxString& GetMessages() const { return m_messages; }
+
+    void Flush() override {} // Do not show any dialog
 
     wxLogCollector(const wxLogCollector&) = delete;
     wxLogCollector& operator=(const wxLogCollector&) = delete;
 
+protected:
+    void DoLogRecord(wxLogLevel, const wxString& msg, const wxLogRecordInfo&) override
+    {
+        if (!m_messages.empty())
+            m_messages += '\n';
+        m_messages += msg;
+    }
+
+    void DoLogText(const wxString& msg) override
+    {
+        if (!m_messages.empty())
+            m_messages += '\n';
+        m_messages += msg;
+    }
+
 private:
-    wxLogBuffer m_logBuf;
+    wxString m_messages;
     wxLog* const m_logOrig;
 };
 #endif
