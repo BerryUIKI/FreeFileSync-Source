@@ -132,6 +132,11 @@ Upstream source assumes custom-patched wxWidgets builds. Standard Linux distribu
     `DrawHighlighted` was introduced in wxWidgets 3.3+ (transparent overlay selection). In wxWidgets 3.2, the method does not exist on `wxGridColumnHeaderRendererDefault`.
     - Wrapped `DrawHighlighted` with `#if wxCHECK_VERSION(3, 3, 0)` in `FreeFileSync/Source/ui/small_dlgs.cpp`.
 
+11. **Compatibility guards for `libcurl` version differences**:
+    In libcurl < 8.8.0 (Ubuntu 24.04 ships with curl 8.5.0), `CURLE_OBSOLETE34` was still named `CURLE_HTTP_POST_ERROR`, while `CURLE_TOO_LARGE` was added in 8.6.0 and `CURLE_ECH_REQUIRED` in 8.8.0.
+    - Guarded `CURLE_OBSOLETE34` / `CURLE_HTTP_POST_ERROR` with `#if LIBCURL_VERSION_NUM >= 0x080800`.
+    - Guarded `CURLE_TOO_LARGE` (0x080600) and `CURLE_ECH_REQUIRED` (0x080800) in `libcurl/curl_wrap.cpp`.
+
 ---
 
 ## 4. CI/CD & Automated Releases

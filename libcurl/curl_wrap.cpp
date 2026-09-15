@@ -339,7 +339,11 @@ std::wstring zen::formatCurlStatusCode(CURLcode sc)
             ZEN_CASE_RETURN_STRING(CURLE_FTP_COULDNT_USE_REST);
             ZEN_CASE_RETURN_STRING(CURLE_OBSOLETE32);
             ZEN_CASE_RETURN_STRING(CURLE_RANGE_ERROR);
+#if LIBCURL_VERSION_NUM >= 0x080800
             ZEN_CASE_RETURN_STRING(CURLE_OBSOLETE34);
+#else
+            ZEN_CASE_RETURN_STRING(CURLE_HTTP_POST_ERROR);
+#endif
             ZEN_CASE_RETURN_STRING(CURLE_SSL_CONNECT_ERROR);
             ZEN_CASE_RETURN_STRING(CURLE_BAD_DOWNLOAD_RESUME);
             ZEN_CASE_RETURN_STRING(CURLE_FILE_COULDNT_READ_FILE);
@@ -405,11 +409,17 @@ std::wstring zen::formatCurlStatusCode(CURLcode sc)
             ZEN_CASE_RETURN_STRING(CURLE_PROXY);
             ZEN_CASE_RETURN_STRING(CURLE_SSL_CLIENTCERT);
             ZEN_CASE_RETURN_STRING(CURLE_UNRECOVERABLE_POLL);
+#if LIBCURL_VERSION_NUM >= 0x080600
             ZEN_CASE_RETURN_STRING(CURLE_TOO_LARGE);
+#endif
+#if LIBCURL_VERSION_NUM >= 0x080800
             ZEN_CASE_RETURN_STRING(CURLE_ECH_REQUIRED);
+#endif
             ZEN_CASE_RETURN_STRING(CURL_LAST);
     }
+#if LIBCURL_VERSION_NUM >= 0x080800
     static_assert(CURL_LAST == CURLE_ECH_REQUIRED + 1);
+#endif
 
     return replaceCpy<std::wstring>(L"Curl status %x", L"%x", numberTo<std::wstring>(static_cast<int>(sc)));
 }
