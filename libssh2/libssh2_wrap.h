@@ -22,6 +22,14 @@
     #error libssh2_sftp.h header guard changed
 #endif
 
+//distribution libssh2 packages keep these in private src/sftp.h rather than public libssh2_sftp.h
+#ifndef MAX_SFTP_OUTGOING_SIZE
+    #define MAX_SFTP_OUTGOING_SIZE 30000
+#endif
+#ifndef MAX_SFTP_READ_SIZE
+    #define MAX_SFTP_READ_SIZE 30000
+#endif
+
 //fix libssh2 64-bit warning mess: https://github.com/libssh2/libssh2/pull/96
 #undef libssh2_userauth_password
 inline int libssh2_userauth_password(LIBSSH2_SESSION* session, const std::string& username, const std::string& password)

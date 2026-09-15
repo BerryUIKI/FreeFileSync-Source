@@ -119,8 +119,9 @@ Upstream source assumes custom-patched wxWidgets builds. Standard Linux distribu
    C++23 explicit object parameter (`this const auto& self`) for recursive lambdas requires GCC 14+. Standard Linux distributions such as Ubuntu 24.04 ship with GCC 13 by default.
    - Refactored recursive lambdas in `FreeFileSync/Source/base/versioning.cpp` and `zen/dir_watcher.cpp` to use the portable zero-overhead self-passing lambda pattern.
 
-8. **Compatibility guards for newer `LIBSSH2_ERROR_*` constants**:
-   Distribution packages of `libssh2` (e.g. `libssh2-1-dev` 1.11.0 on Ubuntu 24.04) may not define recent error codes such as `LIBSSH2_ERROR_MAC_FAILURE`, `LIBSSH2_ERROR_RANDGEN`, etc.
+8. **Compatibility guards for `libssh2` constants and error codes**:
+   Distribution packages of `libssh2` (e.g. `libssh2-1-dev` 1.11.0 on Ubuntu 24.04) keep `MAX_SFTP_OUTGOING_SIZE` and `MAX_SFTP_READ_SIZE` in private headers, and may not define recent error codes such as `LIBSSH2_ERROR_MAC_FAILURE`, `LIBSSH2_ERROR_RANDGEN`, etc.
+   - Defined `MAX_SFTP_OUTGOING_SIZE` and `MAX_SFTP_READ_SIZE` (30000) under `#ifndef` in `libssh2/libssh2_wrap.h`.
    - Guarded newer `LIBSSH2_ERROR_*` return cases in `libssh2/libssh2_wrap.h` with `#ifdef`.
 
 ---
